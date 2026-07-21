@@ -1,5 +1,4 @@
 export default function Header({
-  showCompact,
   tabIsHome,
   headerTitle,
   headerShowBack,

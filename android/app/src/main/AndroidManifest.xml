@@ -32,4 +32,9 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Caméra optionnelle : la pellicule utilise l'appareil photo via le sélecteur de fichiers.
+         Non requise pour installer l'app (les appareils sans caméra peuvent choisir depuis la galerie). -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 </manifest>

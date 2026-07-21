@@ -11,8 +11,7 @@ export default function HomeTab({
   onQuickParis,
   onQuickAudios,
   onQuickPellicule,
-  openSession,
-  onDemoAlert
+  openSession
 }) {
   const upcomingSessions = computeUpcoming(content, 3);
 
@@ -134,18 +133,16 @@ export default function HomeTab({
             </div>
           </div>
         ))}
-      </div>
 
-      <div onClick={onDemoAlert} style={{
-        textAlign: 'center',
-        padding: '12px',
-        border: '1px dashed rgba(18,23,42,0.25)',
-        borderRadius: '100px',
-        color: 'rgba(18,23,42,0.55)',
-        fontSize: '12px',
-        fontWeight: 600,
-        cursor: 'pointer'
-      }}>{t('home_demo_btn')}</div>
+        {upcomingSessions.length === 0 && (
+          <div style={{
+            textAlign: 'center',
+            padding: '24px 16px',
+            color: 'rgba(18,23,42,0.4)',
+            fontSize: '13px'
+          }}>{t('home_no_upcoming')}</div>
+        )}
+      </div>
     </>
   );
 }

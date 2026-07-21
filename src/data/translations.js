@@ -16,7 +16,8 @@ export const translations = {
     home_view_programme: "Voir le programme complet",
     home_quick_title: "Accès rapide",
     home_upcoming_title: "À venir",
-    home_demo_btn: "🎯 Tester une notification",
+    home_no_upcoming: "Aucune session à venir pour le moment.",
+    notif_empty: "Aucune notification pour l'instant.",
 
     // Quick actions
     quick_programme: "Programme complet",
@@ -194,7 +195,8 @@ export const translations = {
     home_view_programme: "View full schedule",
     home_quick_title: "Quick access",
     home_upcoming_title: "Upcoming",
-    home_demo_btn: "🎯 Test a notification",
+    home_no_upcoming: "No upcoming sessions at the moment.",
+    notif_empty: "No notifications yet.",
 
     // Quick actions
     quick_programme: "Full schedule",

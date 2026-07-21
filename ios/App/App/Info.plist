@@ -47,5 +47,11 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>L'appareil photo permet de prendre des photos de l'événement pour les partager sur la pellicule.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>L'accès à vos photos permet de partager une image de l'événement sur la pellicule.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Permet d'enregistrer une photo de l'événement dans votre galerie.</string>
 </dict>
 </plist>

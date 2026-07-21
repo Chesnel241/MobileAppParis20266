@@ -73,15 +73,22 @@ function App() {
   const [adminModalOpen, setAdminModalOpen] = useState(false);
   const [pendingAdminAction, setPendingAdminAction] = useState(null);
 
-  // Notification state
+  // Notification state — vide par défaut ; alimenté par le serveur si disponible,
+  // sinon quelques exemples en mode 100% local (sans backend).
   const [notifOpen, setNotifOpen] = useState(false);
-  const [hasNotifBadge, setHasNotifBadge] = useState(true);
-  const [notifBadgeText, setNotifBadgeText] = useState('3');
-  const [notifHistory, setNotifHistory] = useState([
-    { text: "Nouvelle session ajoutée au programme", time: "Il y a 2h" },
-    { text: "Rappel : Prochaine session dans 30 min", time: "Il y a 5h" },
-    { text: "Bienvenue à Paris 2026 !", time: "Hier" }
-  ]);
+  const [hasNotifBadge, setHasNotifBadge] = useState(!API_ENABLED);
+  const [notifBadgeText, setNotifBadgeText] = useState(API_ENABLED ? '' : '3');
+  const [notifHistory, setNotifHistory] = useState(
+    API_ENABLED ? [] : [
+      { text: "Nouvelle session ajoutée au programme", time: "Il y a 2h" },
+      { text: "Rappel : Prochaine session dans 30 min", time: "Il y a 5h" },
+      { text: "Bienvenue à Paris 2026 !", time: "Hier" }
+    ]
+  );
+  // Horodatage de la dernière consultation des notifications (pour le badge « non lues »)
+  const [notifSeenAt, setNotifSeenAt] = useState(
+    () => localStorage.getItem('p26_notif_seen') || ''
+  );
 
   // Programme state
   const [selectedDay, setSelectedDay] = useState('d1');
@@ -169,14 +176,15 @@ function App() {
           text: lang === 'fr' ? n.fr : (n.en || n.fr),
           time: relativeTime(n.createdAt, lang)
         })));
-        setHasNotifBadge(rows.length > 0);
-        setNotifBadgeText(rows.length > 9 ? '9+' : String(rows.length));
+        const unread = rows.filter(n => !notifSeenAt || n.createdAt > notifSeenAt).length;
+        setHasNotifBadge(unread > 0);
+        setNotifBadgeText(unread > 9 ? '9+' : (unread ? String(unread) : ''));
       })
       .catch(() => {});
     load();
     const id = setInterval(load, 30000);
     return () => { alive = false; clearInterval(id); };
-  }, [lang]);
+  }, [lang, notifSeenAt]);
 
   // Tab navigation functions
   const goHome = () => setCurrentTab('home');
@@ -189,6 +197,10 @@ function App() {
   const onToggleNotif = () => {
     setNotifOpen(!notifOpen);
     if (!notifOpen) {
+      // Marque tout comme lu à l'ouverture
+      const nowIso = new Date().toISOString();
+      setNotifSeenAt(nowIso);
+      try { localStorage.setItem('p26_notif_seen', nowIso); } catch { /* stockage indispo */ }
       setHasNotifBadge(false);
       setNotifBadgeText('');
     }
@@ -466,20 +478,11 @@ function App() {
     setAudioProgress(0);
   };
 
-  // Demo alert
-  const onDemoAlert = () => {
-    showToast('🎯 Ceci est une notification de démonstration !');
-    setHasNotifBadge(true);
-    setNotifBadgeText('1');
-  };
-
   const tabIsHome = currentTab === 'home';
   const tabIsProgramme = currentTab === 'programme';
   const tabIsSejour = currentTab === 'sejour';
   const tabIsQuestion = currentTab === 'question';
   const tabIsPlus = currentTab === 'plus';
-
-  const showCompactHeader = !tabIsHome;
 
   // Première connexion : création du profil participant (sans mot de passe)
   if (!profile) {
@@ -511,7 +514,6 @@ function App() {
       <div style={{ flex: 1, overflow: 'auto', position: 'relative', WebkitOverflowScrolling: 'touch' }}>
 
         <Header
-          showCompact={showCompactHeader}
           tabIsHome={tabIsHome}
           headerTitle={
             tabIsProgramme ? t('programme_title') :
@@ -551,7 +553,6 @@ function App() {
               onQuickAudios={() => { goPlus(); setPlusSubmenu('audios'); }}
               onQuickPellicule={() => { goPlus(); setPlusSubmenu('pellicule'); }}
               openSession={openSession}
-              onDemoAlert={onDemoAlert}
             />
           )}
 

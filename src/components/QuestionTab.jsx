@@ -303,8 +303,6 @@ export default function QuestionTab({
             const isAssigned = q.status === 'assigned';
             const showForm = assigningId === q.id;
 
-            const placeLabel = assignPlace ? PLACE_LABELS[assignPlace]?.[lang] || assignPlace : '';
-
             return (
               <div key={q.id} style={{
                 background: '#fff',

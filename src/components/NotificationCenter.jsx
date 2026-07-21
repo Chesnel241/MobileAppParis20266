@@ -28,6 +28,14 @@ export default function NotificationCenter({ onClose, notifHistory, t }) {
         }}>
           {t('notif_center_title')}
         </div>
+        {notifHistory.length === 0 && (
+          <div style={{
+            padding: '10px 12px',
+            fontSize: '12px',
+            color: 'rgba(18,23,42,0.45)',
+            borderTop: '1px solid rgba(18,23,42,0.06)'
+          }}>{t('notif_empty')}</div>
+        )}
         {notifHistory.map((n, i) => (
           <div key={i} style={{
             padding: '10px 12px',

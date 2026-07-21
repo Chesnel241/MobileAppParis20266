@@ -54,7 +54,18 @@ cp deploy.env.example .env
 nano .env     # renseignez DOMAIN, ACME_EMAIL et surtout ADMIN_CODE
 ```
 
-## 5. Lancer
+### Déploiement automatisé (depuis votre Mac)
+
+Un script fait la synchro + le build + le démarrage en une commande :
+
+```bash
+./scripts/deploy.sh root@VOTRE_IP /opt/paris2026
+```
+
+Au premier lancement, il crée `.env` à partir de l'exemple et s'arrête pour que vous
+le renseigniez (DOMAIN, ACME_EMAIL, ADMIN_CODE) ; relancez ensuite la même commande.
+
+## 5. Lancer (manuellement)
 
 ```bash
 docker compose up -d --build
@@ -120,3 +131,30 @@ Changez-le avant l'événement et communiquez-le uniquement aux organisateurs et
 > Note : un code de secours identique existe aussi dans `src/data/constants.js` (`ADMIN_CODE`), utilisé
 > uniquement si le serveur est momentanément injoignable. Alignez-le sur celui du serveur, ou laissez-le
 > distinct si vous préférez qu'aucun accès admin ne soit possible hors ligne.
+
+## 8. Sécurité & confidentialité (déjà en place)
+
+- **HTTPS** partout via Caddy (Let's Encrypt), en-têtes de sécurité (nosniff, HSTS, anti-clickjacking).
+- **Limitation de débit** : connexion admin (20 / 15 min), inscriptions (30 / h), envois & uploads (15–30 / min) par IP.
+- **Photos de la pellicule** : ré-encodées côté serveur avec **suppression des métadonnées EXIF/GPS**
+  (aucune fuite de géolocalisation) et bornées à 1920 px. La modération se fait dans `/admin`.
+- **Aucun mot de passe participant, aucune donnée bancaire.** Données hébergées dans l'UE (Hetzner/Allemagne).
+- Fichiers téléversés et base SQLite sur le volume Docker persistant `api_data` (survivent aux redémarrages).
+
+## ✅ Checklist go-live
+
+**Backend (VPS)**
+- [ ] DNS `A` → IP du VPS ; ports 80/443 ouverts ; Docker installé
+- [ ] `.env` renseigné : `DOMAIN`, `ACME_EMAIL`, **`ADMIN_CODE` changé**
+- [ ] `docker compose up -d --build` ; `https://VOTRE_DOMAINE/api/health` répond `{"ok":true}`
+- [ ] `https://VOTRE_DOMAINE/admin` accessible avec le code ; `https://VOTRE_DOMAINE/privacy.html` en ligne
+- [ ] Contenu réel saisi dans `/admin` (programme, séjour, à propos, compte à rebours)
+- [ ] Liste des personnes prises en charge importée (section Logements)
+- [ ] Sauvegarde planifiée du volume `api_data` (voir §5)
+
+**Application (stores)**
+- [ ] `echo "VITE_API_URL=https://VOTRE_DOMAINE" > .env.production`
+- [ ] `npm run sync` ; ouvrir Xcode / Android Studio
+- [ ] iOS : équipe de signature, bundle `org.lwmfd.paris2026`, archive → App Store Connect (URL confidentialité renseignée)
+- [ ] Android : keystore de signature, AAB signé → Play Console (data safety : nom, téléphone, photos ; URL confidentialité)
+- [ ] Test sur appareil réel : inscription, question, **pellicule (caméra + filigrane)**, itinéraire GPS logement

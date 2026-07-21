@@ -16,7 +16,30 @@
       "Bash(git init *)",
       "Bash(git add *)",
       "Bash(grep -iE \"node_modules|\\\\.env$|\\\\.env\\\\.local|server/data|\\\\.db$|\\\\.log$|dist/\")",
-      "Bash(awk -F/ '{print $1}')"
+      "Bash(awk -F/ '{print $1}')",
+      "Bash(git -c 'user.name=Chesnel Ekogha' -c user.email=ekoghachesneloff@gmail.com commit -m ' *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" localhost:8097/api/health)",
+      "Bash(git remote *)",
+      "Bash(git fetch *)",
+      "Bash(git ls-tree *)",
+      "Bash(git push *)",
+      "Bash(git ls-remote *)",
+      "Bash(pkill -f \"node src/index.js\")",
+      "Bash(rm -rf /tmp/p26sec)",
+      "Bash(mkdir -p /tmp/p26sec/up)",
+      "Bash(DB_PATH=/tmp/p26sec/sec.db UPLOADS_DIR=/tmp/p26sec/up PORT=8095 ADMIN_CODE=TESTSECRET node src/index.js)",
+      "Bash(curl -s localhost:8095/api/health)",
+      "Bash(curl -s -D - -o /dev/null localhost:8095/api/health)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" -X POST localhost:8095/api/admin/login -H 'Content-Type: application/json' --data '{\"code\":\"x\"}')",
+      "Bash(pkill -f \"PORT=8095\")",
+      "Bash(npx cap *)",
+      "Bash(chmod +x /Users/chesnelekoghamacos/paris-2026-app/scripts/deploy.sh)",
+      "Bash(bash -n /Users/chesnelekoghamacos/paris-2026-app/scripts/deploy.sh)",
+      "Bash(rm -rf /tmp/p26final)",
+      "Bash(mkdir -p /tmp/p26final/up)",
+      "Bash(DB_PATH=/tmp/p26final/db.sqlite UPLOADS_DIR=/tmp/p26final/up PORT=8094 ADMIN_CODE=FINALCODE node src/index.js)",
+      "Bash(pkill -f \"PORT=8094\")",
+      "Bash(grep -iE \"node_modules|/data/|\\\\.db$|\\\\.env$|\\\\.env\\\\.local|\\\\.log$\")"
     ]
   }
 }

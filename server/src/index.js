@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
+import rateLimit from 'express-rate-limit';
+import sharp from 'sharp';
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, extname } from 'node:path';
@@ -14,7 +16,13 @@ const PORT = process.env.PORT || 8080;
 const ADMIN_CODE = process.env.ADMIN_CODE || 'LWMFD2026';
 const ADMIN_SESSION_HOURS = Number(process.env.ADMIN_SESSION_HOURS || 24);
 const UPLOADS_DIR = process.env.UPLOADS_DIR || './data/uploads';
+// Origines autorisées (CORS). Vide = toutes (l'API est protégée par jetons Bearer, pas de cookies).
+const CORS_ORIGINS = (process.env.CORS_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
 mkdirSync(UPLOADS_DIR, { recursive: true });
+
+if (ADMIN_CODE === 'LWMFD2026') {
+  console.warn('[ATTENTION] ADMIN_CODE utilise la valeur par défaut. Définissez ADMIN_CODE en production.');
+}
 
 // Extensions autorisées par type de média
 const IMAGE_EXT = ['.jpg', '.jpeg', '.png', '.webp'];
@@ -38,13 +46,57 @@ function dropFile(file) {
   try { unlinkSync(join(UPLOADS_DIR, file.filename)); } catch { /* déjà supprimé */ }
 }
 
+// Ré-encode une image : respecte l'orientation EXIF, borne la taille et SUPPRIME toutes
+// les métadonnées (dont la géolocalisation GPS). Renvoie le nouveau nom de fichier (.jpg).
+// En cas d'échec (fichier non-image), supprime le fichier et renvoie null.
+async function processImage(file, maxDim = 1920) {
+  const srcPath = join(UPLOADS_DIR, file.filename);
+  const outName = `${randomUUID()}.jpg`;
+  const outPath = join(UPLOADS_DIR, outName);
+  try {
+    await sharp(srcPath)
+      .rotate() // auto-orientation d'après EXIF, avant suppression des métadonnées
+      .resize(maxDim, maxDim, { fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: 82 })
+      .toFile(outPath); // sharp n'inclut pas les métadonnées par défaut → EXIF/GPS supprimés
+    dropFile(file);
+    return outName;
+  } catch {
+    dropFile(file);
+    try { unlinkSync(outPath); } catch { /* rien à nettoyer */ }
+    return null;
+  }
+}
+
 const app = express();
 app.set('trust proxy', 1);
-app.use(cors());
+app.disable('x-powered-by');
+
+app.use(cors(CORS_ORIGINS.length ? { origin: CORS_ORIGINS } : {}));
+
+// En-têtes de sécurité (équivalent minimal de helmet, sans dépendance)
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  next();
+});
+
 app.use(express.json({ limit: '64kb' }));
 
 const now = () => new Date().toISOString();
 const token = () => randomBytes(24).toString('hex');
+
+// ---- Limiteurs de débit (anti-abus / anti-force brute) ----
+const makeLimiter = (windowMs, max, message) => rateLimit({
+  windowMs, max, standardHeaders: true, legacyHeaders: false,
+  message: { error: message || 'too_many_requests' },
+});
+const loginLimiter = makeLimiter(15 * 60 * 1000, 20, 'too_many_login_attempts'); // 20 / 15 min / IP
+const registerLimiter = makeLimiter(60 * 60 * 1000, 30, 'too_many_registrations'); // 30 / h / IP
+const writeLimiter = makeLimiter(60 * 1000, 30, 'too_many_requests');              // 30 / min / IP
+const uploadLimiter = makeLimiter(60 * 1000, 15, 'too_many_uploads');              // 15 / min / IP
 
 // Comparaison à temps constant (évite les attaques temporelles sur le code admin)
 function safeEqual(a, b) {
@@ -179,7 +231,7 @@ function autoLinkHousingRow(row) {
 }
 
 // ---- Inscription participant (première connexion, sans mot de passe) ----
-app.post('/api/participants', (req, res) => {
+app.post('/api/participants', registerLimiter, (req, res) => {
   const { firstName, lastName, phone, country } = req.body || {};
   if (![firstName, lastName, phone, country].every(v => typeof v === 'string' && v.trim())) {
     return res.status(400).json({ error: 'missing_fields' });
@@ -212,7 +264,7 @@ app.get('/api/participants/me', requireParticipant, (req, res) => {
 });
 
 // ---- Questions (côté participant) ----
-app.post('/api/questions', requireParticipant, (req, res) => {
+app.post('/api/questions', writeLimiter, requireParticipant, (req, res) => {
   const { text } = req.body || {};
   if (typeof text !== 'string' || !text.trim()) {
     return res.status(400).json({ error: 'empty_text' });
@@ -231,7 +283,7 @@ app.get('/api/questions/mine', requireParticipant, (req, res) => {
 });
 
 // ---- Admin (organisateurs & pasteurs) ----
-app.post('/api/admin/login', (req, res) => {
+app.post('/api/admin/login', loginLimiter, (req, res) => {
   const { code } = req.body || {};
   if (!safeEqual(code, ADMIN_CODE)) {
     return res.status(401).json({ error: 'bad_code' });
@@ -377,7 +429,7 @@ app.get('/api/admin/participants', requireAdmin, (_req, res) => {
 });
 
 // ---- Médias (admin) : fichiers audio des enseignements, photo de l'hôtel… ----
-app.post('/api/admin/media', requireAdmin, upload.single('file'), (req, res) => {
+app.post('/api/admin/media', uploadLimiter, requireAdmin, upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'missing_file' });
   const kind = req.body?.kind === 'audio' ? 'audio' : 'image';
   const allowed = kind === 'audio' ? AUDIO_EXT : IMAGE_EXT;
@@ -385,20 +437,28 @@ app.post('/api/admin/media', requireAdmin, upload.single('file'), (req, res) => 
     dropFile(req.file);
     return res.status(400).json({ error: 'bad_file_type' });
   }
+  if (kind === 'image') {
+    const name = await processImage(req.file);
+    if (!name) return res.status(400).json({ error: 'invalid_image' });
+    return res.status(201).json({ url: `/media/${name}` });
+  }
   res.status(201).json({ url: `/media/${req.file.filename}` });
 });
 
 // ---- Pellicule (photos partagées par les participants) ----
-app.post('/api/photos', requireParticipant, upload.single('photo'), (req, res) => {
+// Défense en profondeur : ré-encodage + suppression des métadonnées (GPS) côté serveur.
+app.post('/api/photos', uploadLimiter, requireParticipant, upload.single('photo'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'missing_file' });
   if (!isAllowed(req.file, IMAGE_EXT)) {
     dropFile(req.file);
     return res.status(400).json({ error: 'bad_file_type' });
   }
+  const name = await processImage(req.file);
+  if (!name) return res.status(400).json({ error: 'invalid_image' });
   const id = randomUUID();
   db.prepare('INSERT INTO photos (id, participant_id, file, created_at) VALUES (?, ?, ?, ?)')
-    .run(id, req.participant.id, req.file.filename, now());
-  res.status(201).json({ id, url: `/media/${req.file.filename}` });
+    .run(id, req.participant.id, name, now());
+  res.status(201).json({ id, url: `/media/${name}` });
 });
 
 app.get('/api/photos', requireParticipant, (_req, res) => {
@@ -462,11 +522,29 @@ function serializeQuestionForAdmin(q) {
   };
 }
 
+// ---- Gestion centralisée des erreurs (dont fichiers trop volumineux) ----
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, _next) => {
+  if (err instanceof multer.MulterError) {
+    const code = err.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+    return res.status(code).json({ error: err.code === 'LIMIT_FILE_SIZE' ? 'file_too_large' : 'upload_error' });
+  }
+  console.error('Erreur non gérée :', err && err.message);
+  res.status(500).json({ error: 'server_error' });
+});
+
 // Purge quotidienne des sessions admin expirées
 setInterval(() => {
   db.prepare('DELETE FROM admin_sessions WHERE expires_at < ?').run(now());
 }, 3600 * 1000).unref();
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Paris 2026 API en écoute sur le port ${PORT}`);
 });
+
+// Arrêt propre (Docker/systemd envoient SIGTERM)
+for (const sig of ['SIGTERM', 'SIGINT']) {
+  process.on(sig, () => {
+    server.close(() => { try { db.close(); } catch { /* déjà fermée */ } process.exit(0); });
+  });
+}
