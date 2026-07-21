@@ -125,12 +125,16 @@ Puis suivez la checklist de publication du [README](README.md).
 
 ## 7. Sécurité — le code administrateur
 
-Le code administrateur est vérifié **côté serveur** (variable `ADMIN_CODE` du `.env` sur le VPS).
-Changez-le avant l'événement et communiquez-le uniquement aux organisateurs et pasteurs.
+Le code administrateur est vérifié **exclusivement côté serveur** (variable `ADMIN_CODE` du `.env`
+sur le VPS). Il n'est **pas** embarqué dans l'application mobile.
 
-> Note : un code de secours identique existe aussi dans `src/data/constants.js` (`ADMIN_CODE`), utilisé
-> uniquement si le serveur est momentanément injoignable. Alignez-le sur celui du serveur, ou laissez-le
-> distinct si vous préférez qu'aucun accès admin ne soit possible hors ligne.
+- **Minimum 16 caractères** : en deçà, le serveur refuse de démarrer. Générez-en un solide :
+  ```bash
+  openssl rand -base64 24
+  ```
+- Communiquez-le uniquement aux organisateurs et aux pasteurs.
+- Conséquence à connaître : si le serveur est injoignable, **aucun accès organisateur/pasteur n'est
+  possible** (c'est volontaire — le secret ne circule pas dans l'app).
 
 ## 8. Sécurité & confidentialité (déjà en place)
 

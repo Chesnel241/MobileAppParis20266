@@ -8,18 +8,33 @@ Paris, 24–31 juillet 2026.
 - **Backend** (`server/`) : API Node/Express + SQLite pour la synchronisation temps réel entre
   participants, pasteurs et organisateurs. Déployable sur un VPS (voir [DEPLOY.md](DEPLOY.md)).
 
+## Prérequis
+
+**Node 22** (version épinglée dans `.nvmrc`, identique à la CI). Avec nvm : `nvm use`.
+
+> ⚠ **Après chaque `git pull`**, relancez `npm install` (racine **et** `server/`) : de nouvelles
+> dépendances peuvent avoir été ajoutées, sinon le build échoue avec une erreur de module introuvable.
+>
+> Si les tests backend échouent avec `ERR_DLOPEN_FAILED` / `NODE_MODULE_VERSION`, c'est que le module
+> natif `better-sqlite3` a été compilé pour une autre version de Node. Corrigez avec :
+> ```bash
+> cd server && npm rebuild better-sqlite3
+> ```
+
 ## Développement
 
 ```bash
 npm install
 npm run dev        # serveur de développement web
 npm run lint       # oxlint
+npm test           # tests unitaires
+npm run check      # lint + tests + build (ce que vérifie la CI)
 ```
 
 Le backend se lance séparément :
 
 ```bash
-cd server && npm install && npm run dev
+cd server && npm install && npm test && npm run dev
 ```
 
 Pour connecter l'app au backend en local, créez `.env.local` :
@@ -36,8 +51,10 @@ Sans cette variable, l'app tourne en **mode local** (données par appareil, sans
   résidence). Aucun mot de passe. Le profil est conservé sur l'appareil et, si le serveur est configuré,
   enregistré côté serveur pour la synchronisation.
 - **Organisateurs & pasteurs** : l'espace « Pasteur » (onglet Questions) et le tableau de bord
-  « Organisateur » (onglet Plus) sont protégés par un **code administrateur commun**. Il est vérifié
-  côté serveur (`ADMIN_CODE`), avec un code de secours hors-ligne dans `src/data/constants.js`.
+  « Organisateur » (onglet Plus) sont protégés par un **code administrateur commun**, vérifié
+  **uniquement côté serveur** (`ADMIN_CODE`, minimum 16 caractères — le serveur refuse de démarrer
+  en deçà). Ce code n'est **pas** embarqué dans l'application : il n'y a donc pas d'accès
+  organisateur/pasteur si le serveur est injoignable.
   **Changez ces valeurs avant publication.**
 
 ## Synchronisation
