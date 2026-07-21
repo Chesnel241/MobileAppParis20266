@@ -17,6 +17,10 @@ services:
       SUPABASE_ADMIN_EMAILS: ${SUPABASE_ADMIN_EMAILS:-}
       SUPABASE_ADMIN_ROLE: ${SUPABASE_ADMIN_ROLE:-}
       ALLOW_ADMIN_CODE: ${ALLOW_ADMIN_CODE:-true}
+      # Notifications push web
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
     volumes:
       - api_data:/data
     expose:

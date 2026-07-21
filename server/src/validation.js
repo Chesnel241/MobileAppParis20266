@@ -178,6 +178,29 @@ export function validateAdminLoginInput(value) {
   return { code: string(input.code, 'code', { max: 256 }), supabaseAccessToken: null };
 }
 
+export function validatePushSubscriptionInput(value) {
+  const input = object(value, 'body', ['subscription'], ['lang']);
+  const sub = object(input.subscription, 'subscription', ['endpoint', 'keys']);
+  const endpoint = string(sub.endpoint, 'subscription.endpoint', { max: 1024 });
+  if (!/^https:\/\//i.test(endpoint)) fail('subscription.endpoint', 'must_be_https');
+  const keys = object(sub.keys, 'subscription.keys', ['p256dh', 'auth']);
+  return {
+    subscription: {
+      endpoint,
+      keys: {
+        p256dh: string(keys.p256dh, 'subscription.keys.p256dh', { max: 256 }),
+        auth: string(keys.auth, 'subscription.keys.auth', { max: 256 }),
+      },
+    },
+    lang: optionalString(input.lang, 'lang', 5),
+  };
+}
+
+export function validatePushUnsubscribeInput(value) {
+  const input = object(value, 'body', ['endpoint']);
+  return { endpoint: string(input.endpoint, 'endpoint', { max: 1024 }) };
+}
+
 export function validateNotificationInput(value) {
   const input = object(value, 'body', ['textFr'], ['textEn']);
   const textFr = string(input.textFr, 'textFr', { max: 1000 });

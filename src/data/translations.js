@@ -18,6 +18,11 @@ export const translations = {
     home_upcoming_title: "À venir",
     home_no_upcoming: "Aucune session à venir pour le moment.",
     notif_empty: "Aucune notification pour l'instant.",
+    push_enable: "🔔 Activer les notifications",
+    push_enabled: "Notifications activées",
+    push_denied: "Notifications bloquées dans les réglages de votre navigateur.",
+    push_ios_install: "Sur iPhone, ajoutez d'abord l'application à votre écran d'accueil (Partager ▸ Sur l'écran d'accueil) pour recevoir les notifications.",
+    push_error: "Activation impossible. Réessayez.",
 
     // Quick actions
     quick_programme: "Programme complet",
@@ -220,6 +225,11 @@ export const translations = {
     home_upcoming_title: "Upcoming",
     home_no_upcoming: "No upcoming sessions at the moment.",
     notif_empty: "No notifications yet.",
+    push_enable: "🔔 Enable notifications",
+    push_enabled: "Notifications enabled",
+    push_denied: "Notifications are blocked in your browser settings.",
+    push_ios_install: "On iPhone, first add the app to your Home Screen (Share ▸ Add to Home Screen) to receive notifications.",
+    push_error: "Could not enable. Please try again.",
 
     // Quick actions
     quick_programme: "Full schedule",

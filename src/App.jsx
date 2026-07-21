@@ -25,6 +25,7 @@ import {
   mediaUrl,
 } from './data/api';
 import { cancelSessionReminder, scheduleSessionReminder } from './native';
+import { registerServiceWorker, enablePush, currentSubscription, pushBlockedReason, pushSupported } from './data/push';
 
 // "il y a 2h", "hier"… à partir d'une date ISO
 function relativeTime(iso, lang) {
@@ -115,6 +116,9 @@ function App() {
       { text: "Bienvenue à Paris 2026 !", time: "Hier" }
     ]
   );
+  // Notifications push : visibilité du bouton, état d'abonnement, raison de blocage
+  const [pushState, setPushState] = useState({ visible: false, enabled: false, busy: false, reason: null });
+
   // Horodatage de la dernière consultation des notifications (pour le badge « non lues »)
   const [notifSeenAt, setNotifSeenAt] = useState(
     () => localStorage.getItem('p26_notif_seen') || ''
@@ -239,7 +243,17 @@ function App() {
       .catch(() => {});
     load();
     const id = setInterval(load, 30000);
-    return () => { alive = false; clearInterval(id); };
+    // Rafraîchissement immédiat au retour sur l'app : le participant voit
+    // l'information à jour dès qu'il rouvre l'écran, sans attendre le cycle.
+    const onVisible = () => { if (document.visibilityState === 'visible') load(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      alive = false;
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
   }, [lang, notifSeenAt]);
 
   // Tab navigation functions
@@ -250,6 +264,42 @@ function App() {
   const goPlus = () => setCurrentTab('plus');
 
   // Notification functions
+  // ---- Notifications push ----
+  // Enregistre le service worker et détermine si l'abonnement est possible.
+  useEffect(() => {
+    if (!API_ENABLED || !profile) return;
+    let alive = true;
+    (async () => {
+      if (pushSupported()) await registerServiceWorker();
+      const reason = pushBlockedReason();
+      const sub = reason ? null : await currentSubscription();
+      if (!alive) return;
+      setPushState({
+        // Masqué seulement si l'appareil ne pourra jamais recevoir de push
+        visible: reason !== 'unsupported' && reason !== 'offline',
+        enabled: Boolean(sub),
+        busy: false,
+        reason,
+      });
+    })();
+    return () => { alive = false; };
+  }, [profile]);
+
+  // L'abonnement DOIT partir d'un clic : iOS refuse une demande automatique.
+  const onEnablePush = async () => {
+    setPushState(p => ({ ...p, busy: true }));
+    const result = await enablePush(lang);
+    if (result.ok) {
+      setPushState(p => ({ ...p, enabled: true, busy: false, reason: null }));
+      showToast(t('push_enabled'));
+    } else {
+      setPushState(p => ({ ...p, busy: false, reason: result.reason }));
+      if (result.reason !== 'ios_needs_install' && result.reason !== 'denied') {
+        showToast(t('push_error'));
+      }
+    }
+  };
+
   const onToggleNotif = () => {
     setNotifOpen(!notifOpen);
     if (!notifOpen) {
@@ -473,7 +523,7 @@ function App() {
       .then((h) => { if (alive) setHousing(h); })
       .catch(() => {});
     load();
-    const id = setInterval(load, 60000);
+    const id = setInterval(load, 30000);
     return () => { alive = false; clearInterval(id); };
   }, [profile]);
 
@@ -771,6 +821,8 @@ function App() {
           onClose={onCloseNotif}
           notifHistory={notifHistory}
           t={t}
+          pushState={pushState}
+          onEnablePush={onEnablePush}
         />
       )}
 

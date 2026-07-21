@@ -9,6 +9,7 @@ import { dirname, join, extname } from 'node:path';
 import { mkdirSync, unlinkSync } from 'node:fs';
 import config from './config.js';
 import { fetchSupabaseUser, isAuthorizedAdmin, adminLabel } from './supabaseAuth.js';
+import { initPush, broadcast, saveSubscription, removeSubscription } from './push.js';
 import db from './db.js';
 import { defaultContent, CONTENT_SECTIONS } from './defaults.js';
 import {
@@ -20,6 +21,8 @@ import {
   validateHousingLinkInput,
   validateHousingUpdateInput,
   validateNotificationInput,
+  validatePushSubscriptionInput,
+  validatePushUnsubscribeInput,
   validateParticipantInput,
   validateQuestionAssignmentInput,
   validateQuestionInput,
@@ -34,6 +37,13 @@ const UPLOADS_DIR = config.uploadsDir;
 // En production, la configuration refuse de démarrer si cette liste est vide.
 const CORS_ORIGINS = config.corsOrigins;
 mkdirSync(UPLOADS_DIR, { recursive: true });
+
+// Active les notifications push si les clés VAPID sont configurées.
+if (initPush(config.vapid)) {
+  console.log('[PUSH] notifications push activées');
+} else {
+  console.warn('[PUSH] VAPID absent : notifications push désactivées');
+}
 
 // Extensions autorisées par type de média
 const IMAGE_EXT = ['.jpg', '.jpeg', '.png', '.webp'];
@@ -214,12 +224,35 @@ app.get('/api/notifications', (_req, res) => {
   res.json(rows.map(n => ({ id: n.id, fr: n.text_fr, en: n.text_en, createdAt: n.created_at })));
 });
 
-app.post('/api/admin/notifications', requireAdmin, (req, res) => {
+app.post('/api/admin/notifications', requireAdmin, asyncHandler(async (req, res) => {
   const { textFr: fr, textEn: en } = validateNotificationInput(req.body);
   const id = randomUUID();
   db.prepare('INSERT INTO notifications (id, text_fr, text_en, created_at) VALUES (?, ?, ?, ?)')
     .run(id, fr, en, now());
-  res.status(201).json({ id, fr, en });
+  // Diffusion push immédiate ; un échec d'envoi n'invalide pas la notification.
+  const push = await broadcast({ fr, en });
+  res.status(201).json({ id, fr, en, push });
+}));
+
+// ---- Abonnements aux notifications push ----
+app.get('/api/push/public-key', (_req, res) => {
+  res.json({ publicKey: config.vapid ? config.vapid.publicKey : null });
+});
+
+app.post('/api/push/subscribe', writeLimiter, requireParticipant, (req, res) => {
+  if (!config.vapid) return res.status(503).json({ error: 'push_not_configured' });
+  const { subscription, lang } = validatePushSubscriptionInput(req.body);
+  saveSubscription(subscription, {
+    participantId: req.participant.id,
+    lang: lang === 'en' ? 'en' : 'fr',
+  });
+  res.status(201).json({ ok: true });
+});
+
+app.post('/api/push/unsubscribe', writeLimiter, requireParticipant, (req, res) => {
+  const { endpoint } = validatePushUnsubscribeInput(req.body);
+  removeSubscription(endpoint);
+  res.json({ ok: true });
 });
 
 // ---- Inscription participant (première connexion, sans mot de passe) ----

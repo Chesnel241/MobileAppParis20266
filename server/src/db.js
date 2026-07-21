@@ -72,6 +72,16 @@ db.exec(`
     updated_at     TEXT NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS push_subscriptions (
+    endpoint       TEXT PRIMARY KEY,
+    p256dh         TEXT NOT NULL,
+    auth           TEXT NOT NULL,
+    participant_id TEXT REFERENCES participants(id) ON DELETE CASCADE,
+    lang           TEXT NOT NULL DEFAULT 'fr',
+    created_at     TEXT NOT NULL,
+    last_error     TEXT
+  );
+
   CREATE TABLE IF NOT EXISTS photos (
     id             TEXT PRIMARY KEY,
     participant_id TEXT NOT NULL REFERENCES participants(id) ON DELETE CASCADE,

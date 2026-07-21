@@ -90,9 +90,27 @@ function parseSupabase(env) {
   return Object.freeze({ url: rawUrl, anonKey, adminEmails: Object.freeze(adminEmails), adminRole });
 }
 
+// Notifications push web (VAPID). Optionnelles : sans clés, l'app se rabat sur
+// le rafraîchissement périodique et n'affiche pas le bouton d'activation.
+function parseVapid(env) {
+  const publicKey = String(env.VAPID_PUBLIC_KEY || '').trim();
+  const privateKey = String(env.VAPID_PRIVATE_KEY || '').trim();
+  if (!publicKey && !privateKey) return null;
+  if (!publicKey || !privateKey) {
+    configError('VAPID_PUBLIC_KEY et VAPID_PRIVATE_KEY doivent être définies ensemble.');
+  }
+  const subject = String(env.VAPID_SUBJECT || '').trim();
+  // Le sujet identifie l'expéditeur auprès des services de push (Apple, Google).
+  if (!/^(mailto:|https:\/\/)/.test(subject)) {
+    configError('VAPID_SUBJECT est obligatoire et doit commencer par mailto: ou https://');
+  }
+  return Object.freeze({ publicKey, privateKey, subject });
+}
+
 export function loadConfig(env = process.env) {
   const production = env.NODE_ENV === 'production';
   const supabase = parseSupabase(env);
+  const vapid = parseVapid(env);
   // Le code partagé reste actif par défaut ; il ne peut être désactivé que si
   // Supabase prend le relais, pour ne jamais se retrouver sans accès admin.
   const allowAdminCode = String(env.ALLOW_ADMIN_CODE || 'true').toLowerCase() !== 'false';
@@ -105,6 +123,7 @@ export function loadConfig(env = process.env) {
     adminCode: allowAdminCode ? assertStrongAdminCode(env.ADMIN_CODE) : null,
     allowAdminCode,
     supabase,
+    vapid,
     adminSessionHours: numberInRange(env.ADMIN_SESSION_HOURS || 24, 'ADMIN_SESSION_HOURS', 0.25, 168),
     uploadsDir: env.UPLOADS_DIR || './data/uploads',
     corsOrigins: parseCorsOrigins(env.CORS_ORIGINS, production),

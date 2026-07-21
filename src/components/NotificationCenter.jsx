@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-export default function NotificationCenter({ onClose, notifHistory, t }) {
+export default function NotificationCenter({ onClose, notifHistory, t, pushState, onEnablePush }) {
   const dialogRef = useRef(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -64,6 +64,47 @@ export default function NotificationCenter({ onClose, notifHistory, t }) {
           className="sr-only"
           onClick={onClose}
         >{t('modal_close')}</button>
+
+        {/* Activation des notifications push (le clic est requis par iOS) */}
+        {pushState && pushState.visible && (
+          <div style={{
+            padding: '10px 12px',
+            borderTop: '1px solid rgba(18,23,42,0.06)',
+            background: '#F7F5EF'
+          }}>
+            {pushState.enabled ? (
+              <div style={{ fontSize: '11.5px', color: '#1d7a5c', fontWeight: 600 }}>
+                ✓ {t('push_enabled')}
+              </div>
+            ) : pushState.reason === 'ios_needs_install' ? (
+              <div style={{ fontSize: '11.5px', color: 'rgba(18,23,42,0.65)', lineHeight: 1.4 }}>
+                {t('push_ios_install')}
+              </div>
+            ) : pushState.reason === 'denied' ? (
+              <div style={{ fontSize: '11.5px', color: 'rgba(18,23,42,0.65)', lineHeight: 1.4 }}>
+                {t('push_denied')}
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="ui-button-reset"
+                onClick={onEnablePush}
+                disabled={pushState.busy}
+                style={{
+                  width: '100%',
+                  background: '#0E1B38',
+                  color: '#fff',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  padding: '9px',
+                  borderRadius: '100px',
+                  cursor: pushState.busy ? 'wait' : 'pointer'
+                }}
+              >{pushState.busy ? '…' : t('push_enable')}</button>
+            )}
+          </div>
+        )}
+
         {notifHistory.length === 0 && (
           <div style={{
             padding: '10px 12px',
