@@ -1,0 +1,6 @@
+# HTTPS automatique (Let's Encrypt). Le domaine et l'email viennent du .env.
+{$DOMAIN} {
+	encode gzip
+	tls {$ACME_EMAIL}
+	reverse_proxy api:8080
+}

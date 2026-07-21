@@ -1,0 +1,11 @@
+{
+  "appId": "org.lwmfd.paris2026",
+  "appName": "Convention Paris 2026",
+  "webDir": "dist",
+  "ios": {
+    "contentInset": "automatic"
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}

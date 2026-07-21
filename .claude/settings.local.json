@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node scripts/generate-watermark.mjs)",
+      "Bash(npm install *)",
+      "Bash(python3 -)",
+      "Bash(npm run *)",
+      "Bash(rm -rf data/paris2026.db data/paris2026.db-wal data/paris2026.db-shm data/uploads)",
+      "Bash(DB_PATH=./data/paris2026.db PORT=8097 ADMIN_CODE=LWMFD2026 nohup node src/index.js)",
+      "Bash(echo \"pid $!\")",
+      "Bash(curl -s localhost:8097/api/health)",
+      "Bash(printf 'VITE_API_URL=http://localhost:8097\\\\n')",
+      "Bash(node -e \"import\\('better-sqlite3'\\).then\\(m=>{const db=new \\(m.default\\)\\('./data/paris2026.db'\\);console.log\\('participants:',db.prepare\\('SELECT first_name,last_name,phone FROM participants'\\).all\\(\\)\\);console.log\\('housing:',db.prepare\\('SELECT first_name,last_name,participant_id IS NOT NULL AS lie FROM housing'\\).all\\(\\)\\)}\\)\")",
+      "Bash(gh auth *)",
+      "Bash(gh api *)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(grep -iE \"node_modules|\\\\.env$|\\\\.env\\\\.local|server/data|\\\\.db$|\\\\.log$|dist/\")",
+      "Bash(awk -F/ '{print $1}')"
+    ]
+  }
+}

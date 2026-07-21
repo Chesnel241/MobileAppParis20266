@@ -1,0 +1,36 @@
+# Déploiement Convention Paris 2026 — API + HTTPS automatique (Caddy/Let's Encrypt)
+# Usage : cp deploy.env.example .env  →  éditer  →  docker compose up -d --build
+services:
+  api:
+    build: ./server
+    restart: unless-stopped
+    environment:
+      ADMIN_CODE: ${ADMIN_CODE:?Définissez ADMIN_CODE dans .env}
+      ADMIN_SESSION_HOURS: ${ADMIN_SESSION_HOURS:-24}
+      PORT: 8080
+      DB_PATH: /data/paris2026.db
+    volumes:
+      - api_data:/data
+    expose:
+      - "8080"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?Définissez DOMAIN dans .env}
+      ACME_EMAIL: ${ACME_EMAIL:?Définissez ACME_EMAIL dans .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  api_data:
+  caddy_data:
+  caddy_config:
