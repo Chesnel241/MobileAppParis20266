@@ -1,0 +1,31 @@
+{
+  "_comment": "À fusionner dans le vercel.json de votre site dlwm-convention2026.fr. Adaptez api.dlwm-convention2026.fr à l'URL réelle de votre VPS.",
+
+  "rewrites": [
+    {
+      "_comment": "L'app PWA est servie sous /app. Toutes ses sous-routes retombent sur son index.html (application à page unique).",
+      "source": "/app/:path*",
+      "destination": "/app/index.html"
+    }
+  ],
+
+  "redirects": [
+    {
+      "_comment": "Accès à l'administration mobile avec les comptes Supabase existants.",
+      "source": "/logistique/mobile",
+      "destination": "https://api.dlwm-convention2026.fr/admin/",
+      "permanent": false
+    }
+  ],
+
+  "headers": [
+    {
+      "_comment": "Le service worker doit pouvoir contrôler toute la portée /app.",
+      "source": "/app/sw.js",
+      "headers": [
+        { "key": "Service-Worker-Allowed", "value": "/app/" },
+        { "key": "Cache-Control", "value": "no-cache" }
+      ]
+    }
+  ]
+}

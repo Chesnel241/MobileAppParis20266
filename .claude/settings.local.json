@@ -63,7 +63,9 @@
       "Bash(npm rebuild *)",
       "Bash(rm -rf /tmp/p26push)",
       "Bash(mkdir -p /tmp/p26push/up)",
-      "Bash(node push-e2e.mjs)"
+      "Bash(node push-e2e.mjs)",
+      "Bash(npx oxlint *)",
+      "Bash(VITE_BASE_PATH=/app/ npm run build:demo)"
     ]
   }
 }

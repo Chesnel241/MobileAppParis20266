@@ -26,6 +26,7 @@ import {
 } from './data/api';
 import { cancelSessionReminder, scheduleSessionReminder } from './native';
 import { registerServiceWorker, enablePush, currentSubscription, pushBlockedReason, pushSupported } from './data/push';
+import { isInstalled as isAppInstalled } from './data/install';
 
 // "il y a 2h", "hier"… à partir d'une date ISO
 function relativeTime(iso, lang) {
@@ -52,6 +53,7 @@ import NotificationCenter from './components/NotificationCenter';
 import SessionModal from './components/SessionModal';
 import MiniPlayer from './components/MiniPlayer';
 import Toast from './components/Toast';
+import InstallGuide from './components/InstallGuide';
 
 const loadProfile = () => {
   try {
@@ -88,6 +90,12 @@ const loadReminders = () => {
 
 function App() {
   // Core state
+  // Garde d'installation : l'app n'est accessible qu'une fois ajoutée à l'écran
+  // d'accueil (condition des notifications sur iPhone). Le choix de continuer
+  // sans installer est mémorisé pour ne pas réafficher le guide à chaque visite.
+  const [installBypassed, setInstallBypassed] = useState(
+    () => { try { return localStorage.getItem('p26_install_skipped') === '1'; } catch { return false; } }
+  );
   const [currentTab, setCurrentTab] = useState('home');
   const [lang, setLang] = useState(loadLanguage);
 
@@ -640,6 +648,19 @@ function App() {
   const tabIsQuestion = currentTab === 'question';
   const tabIsPlus = currentTab === 'plus';
 
+  // Guide d'installation : bloque l'accès tant que l'app n'est pas installée.
+  if (!isAppInstalled() && !installBypassed) {
+    return (
+      <InstallGuide
+        lang={lang}
+        onSkip={() => {
+          try { localStorage.setItem('p26_install_skipped', '1'); } catch { /* stockage indisponible */ }
+          setInstallBypassed(true);
+        }}
+      />
+    );
+  }
+
   // Première connexion : création du profil participant (sans mot de passe)
   if (!profile) {
     return (
@@ -656,7 +677,7 @@ function App() {
   if (API_ENABLED && contentStatus !== 'ready') {
     return (
       <main className="service-state" role="status" aria-live="polite">
-        <img src="/uploads/logo_lwmfd.png" alt="Life Word Mission France & Diaspora" />
+        <img src={`${import.meta.env.BASE_URL}uploads/logo_lwmfd.png`} alt="Life Word Mission France & Diaspora" />
         <h1>{contentStatus === 'loading' ? t('content_loading') : t('content_unavailable')}</h1>
         {contentStatus === 'error' && (
           <button type="button" onClick={() => window.location.reload()}>{t('content_retry')}</button>

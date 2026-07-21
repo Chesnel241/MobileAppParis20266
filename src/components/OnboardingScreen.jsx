@@ -89,7 +89,7 @@ export default function OnboardingScreen({ t, lang, onLangFr, onLangEn, onComple
         justifyContent: 'space-between',
         padding: 'calc(18px + env(safe-area-inset-top)) 20px 0'
       }}>
-        <img src="/uploads/logo_lwmfd.png" alt="Life Word Mission France & Diaspora" style={{ height: '40px' }} />
+        <img src={`${import.meta.env.BASE_URL}uploads/logo_lwmfd.png`} alt="Life Word Mission France & Diaspora" style={{ height: '40px' }} />
         <div style={{
           display: 'flex',
           background: 'rgba(255,255,255,0.12)',
@@ -245,7 +245,7 @@ export default function OnboardingScreen({ t, lang, onLangFr, onLangEn, onComple
           color: 'rgba(18,23,42,0.45)'
         }}>
           {t('onboarding_footer')}{' '}
-          <a href="/privacy.html" target="_blank" rel="noopener" style={{
+          <a href={`${import.meta.env.BASE_URL}privacy.html`} target="_blank" rel="noopener" style={{
             color: 'rgba(18,23,42,0.6)',
             textDecoration: 'underline'
           }}>{t('about_privacy_link')}</a>

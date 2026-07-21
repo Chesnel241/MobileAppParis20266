@@ -55,9 +55,9 @@ export default function Header({
             padding: '6px 14px 6px 7px',
             boxShadow: '0 4px 14px rgba(0,0,0,0.15)'
           }}>
-            <img src="/uploads/logo_lwmfd.png" alt="Life Word Mission France & Diaspora" style={{ width: '26px', height: '26px', objectFit: 'contain' }} />
+            <img src={`${import.meta.env.BASE_URL}uploads/logo_lwmfd.png`} alt="Life Word Mission France & Diaspora" style={{ width: '26px', height: '26px', objectFit: 'contain' }} />
             <div style={{ width: '1px', height: '20px', background: 'rgba(18,23,42,0.15)' }}></div>
-            <img src="/uploads/img7-removebg-preview.png" alt="Convention Internationale Paris 2026" style={{ height: '22px', objectFit: 'contain' }} />
+            <img src={`${import.meta.env.BASE_URL}uploads/img7-removebg-preview.png`} alt="Convention Internationale Paris 2026" style={{ height: '22px', objectFit: 'contain' }} />
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

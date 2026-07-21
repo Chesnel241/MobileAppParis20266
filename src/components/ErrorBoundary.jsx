@@ -16,7 +16,7 @@ export default class ErrorBoundary extends Component {
     const english = document.documentElement.lang === 'en';
     return (
       <main className="service-state" role="alert">
-        <img src="/uploads/logo_lwmfd.png" alt="Life Word Mission France & Diaspora" />
+        <img src={`${import.meta.env.BASE_URL}uploads/logo_lwmfd.png`} alt="Life Word Mission France & Diaspora" />
         <h1>{english
           ? 'The application encountered an unexpected error.'
           : "L'application a rencontré une erreur inattendue."}</h1>

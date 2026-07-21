@@ -28,7 +28,7 @@ async function watermarkFile(file) {
   ctx.drawImage(img, 0, 0, w, h);
 
   // Filigrane logo en bas à droite
-  const wm = await loadImage('/uploads/watermark.png');
+  const wm = await loadImage(`${import.meta.env.BASE_URL}uploads/watermark.png`);
   const wmW = Math.round(w * WATERMARK_RATIO);
   const wmH = Math.round(wmW * (wm.height / wm.width));
   const margin = Math.round(w * WATERMARK_MARGIN);

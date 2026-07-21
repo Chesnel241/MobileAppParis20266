@@ -6,7 +6,7 @@
 
 import { API_URL, API_ENABLED, getParticipantToken } from './api';
 
-const SW_URL = '/sw.js';
+const SW_URL = `${import.meta.env.BASE_URL}sw.js`;
 
 export const pushSupported = () =>
   typeof window !== 'undefined'

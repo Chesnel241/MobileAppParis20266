@@ -371,9 +371,9 @@ export default function PlusTab({
             padding: '9px 18px 9px 10px',
             boxShadow: '0 4px 14px rgba(14,27,56,0.12)'
           }}>
-            <img src="/uploads/logo_lwmfd.png" alt="Life Word Mission France & Diaspora" style={{ width: '34px', height: '34px', objectFit: 'contain' }} />
+            <img src={`${import.meta.env.BASE_URL}uploads/logo_lwmfd.png`} alt="Life Word Mission France & Diaspora" style={{ width: '34px', height: '34px', objectFit: 'contain' }} />
             <div style={{ width: '1px', height: '26px', background: 'rgba(18,23,42,0.15)' }}></div>
-            <img src="/uploads/img7-removebg-preview.png" alt="Convention Internationale Paris 2026" style={{ height: '28px', objectFit: 'contain' }} />
+            <img src={`${import.meta.env.BASE_URL}uploads/img7-removebg-preview.png`} alt="Convention Internationale Paris 2026" style={{ height: '28px', objectFit: 'contain' }} />
           </div>
           <div style={{
             fontSize: '13px',
@@ -485,7 +485,7 @@ export default function PlusTab({
           </div>
         </div>
 
-        <a href="/privacy.html" target="_blank" rel="noopener" style={{
+        <a href={`${import.meta.env.BASE_URL}privacy.html`} target="_blank" rel="noopener" style={{
           display: 'block',
           textAlign: 'center',
           marginTop: '18px',
