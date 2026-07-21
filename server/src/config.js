@@ -59,11 +59,52 @@ function parseCorsOrigins(value, production) {
   return origins;
 }
 
+function parseAdminEmails(value) {
+  return String(value || '')
+    .split(',')
+    .map(email => email.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+// Authentification des admins par leurs comptes Supabase existants (optionnelle).
+function parseSupabase(env) {
+  const rawUrl = String(env.SUPABASE_URL || '').trim().replace(/\/$/, '');
+  if (!rawUrl) return null;
+
+  let parsed;
+  try { parsed = new URL(rawUrl); } catch { configError('SUPABASE_URL doit être une URL valide.'); }
+  if (parsed.protocol !== 'https:') configError('SUPABASE_URL doit utiliser HTTPS.');
+
+  const anonKey = String(env.SUPABASE_ANON_KEY || '').trim();
+  if (!anonKey) configError('SUPABASE_ANON_KEY est obligatoire dès que SUPABASE_URL est défini.');
+
+  const adminEmails = parseAdminEmails(env.SUPABASE_ADMIN_EMAILS);
+  const adminRole = String(env.SUPABASE_ADMIN_ROLE || '').trim();
+  // Fail closed : sans critère d'autorisation, tout compte Supabase deviendrait admin.
+  if (adminEmails.length === 0 && !adminRole) {
+    configError(
+      'Définissez SUPABASE_ADMIN_EMAILS et/ou SUPABASE_ADMIN_ROLE : sans critère, '
+      + "n'importe quel compte du projet Supabase deviendrait administrateur."
+    );
+  }
+  return Object.freeze({ url: rawUrl, anonKey, adminEmails: Object.freeze(adminEmails), adminRole });
+}
+
 export function loadConfig(env = process.env) {
   const production = env.NODE_ENV === 'production';
+  const supabase = parseSupabase(env);
+  // Le code partagé reste actif par défaut ; il ne peut être désactivé que si
+  // Supabase prend le relais, pour ne jamais se retrouver sans accès admin.
+  const allowAdminCode = String(env.ALLOW_ADMIN_CODE || 'true').toLowerCase() !== 'false';
+  if (!allowAdminCode && !supabase) {
+    configError('ALLOW_ADMIN_CODE=false exige une configuration Supabase, sinon aucun accès administrateur ne serait possible.');
+  }
+
   return Object.freeze({
     port: integerInRange(env.PORT || 8080, 'PORT', 0, 65535),
-    adminCode: assertStrongAdminCode(env.ADMIN_CODE),
+    adminCode: allowAdminCode ? assertStrongAdminCode(env.ADMIN_CODE) : null,
+    allowAdminCode,
+    supabase,
     adminSessionHours: numberInRange(env.ADMIN_SESSION_HOURS || 24, 'ADMIN_SESSION_HOURS', 0.25, 168),
     uploadsDir: env.UPLOADS_DIR || './data/uploads',
     corsOrigins: parseCorsOrigins(env.CORS_ORIGINS, production),

@@ -42,7 +42,20 @@
       "Bash(grep -iE \"node_modules|/data/|\\\\.db$|\\\\.env$|\\\\.env\\\\.local|\\\\.log$\")",
       "Bash(node scripts/check-store-listing.mjs)",
       "Bash(awk 'NR>1 {print \"  \",$9,$5}')",
-      "Bash(git -c 'user.name=Chesnel Ekogha' -c user.email=ekoghachesneloff@gmail.com commit -q -m ' *)"
+      "Bash(git -c 'user.name=Chesnel Ekogha' -c user.email=ekoghachesneloff@gmail.com commit -q -m ' *)",
+      "Bash(timeout 180 npm test)",
+      "Bash(npm test *)",
+      "Bash(node --test test/supabase-auth.test.js)",
+      "Bash(sleep 2; cat /tmp/p26sb/log.txt 2>/dev/null | head -5)",
+      "Bash(curl -s localhost:8093/api/admin/auth-config)",
+      "Bash(curl -s -o /dev/null -w '   HTTP %{http_code}\\\\n' -X POST localhost:8093/api/admin/login -H 'Content-Type: application/json' --data '{\"supabaseAccessToken\":\"tok-bidon\"}')",
+      "Bash(curl -s -o /dev/null -w '   HTTP %{http_code}\\\\n' -X POST localhost:8093/api/admin/login -H 'Content-Type: application/json' --data '{\"code\":\"Paris#Admin2026!Secure\"}')",
+      "Bash(curl -s -m 5 -o /dev/null -w '   HTTP %{http_code}\\\\n' -X POST localhost:8093/api/admin/login -H 'Content-Type: application/json' --data '{}')",
+      "Bash(curl -s -D - -o /dev/null localhost:8093/api/health)",
+      "Bash(rm -rf /tmp/p26ui)",
+      "Bash(mkdir -p /tmp/p26ui/up)",
+      "Bash(DB_PATH=/tmp/p26ui/db.sqlite UPLOADS_DIR=/tmp/p26ui/up PORT=8092 ADMIN_CODE='Paris#Admin2026!Secure' SUPABASE_URL=https://demo-projet.supabase.co SUPABASE_ANON_KEY=cle_anon_demo SUPABASE_ADMIN_EMAILS=organisateur@exemple.fr node src/index.js)",
+      "Bash(pkill -f \"PORT=8092\")"
     ]
   }
 }

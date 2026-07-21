@@ -123,6 +123,42 @@ Puis suivez la checklist de publication du [README](README.md).
 > sans synchronisation). Avec l'URL renseignée, participants, pasteurs et organisateurs sont synchronisés
 > en temps quasi réel (rafraîchissement automatique toutes les 15 secondes).
 
+## 6 bis. Connexion des admins avec les comptes Supabase existants
+
+Plutôt qu'un code partagé, les organisateurs peuvent se connecter avec **leurs comptes
+Supabase** — les mêmes que sur `dlwm-convention2026.fr/logistique`. Avantages : révocation
+individuelle, pas de secret à faire circuler, et une seule liste d'administrateurs à tenir.
+
+Ajoutez dans le `.env` du VPS :
+
+```bash
+SUPABASE_URL=https://VOTRE-PROJET.supabase.co
+SUPABASE_ANON_KEY=<clé anon publique du projet>
+
+# Au moins l'un des deux est OBLIGATOIRE (sinon le serveur refuse de démarrer) :
+SUPABASE_ADMIN_EMAILS=organisateur1@exemple.fr,organisateur2@exemple.fr
+SUPABASE_ADMIN_ROLE=admin        # si vos comptes portent un rôle dans app_metadata
+```
+
+Ces deux valeurs sont **publiques** (l'URL du projet et la clé anon sont conçues pour être
+exposées côté client). **Ne mettez jamais la clé `service_role` ici.**
+
+Comment ça marche : le panneau échange e-mail/mot de passe contre un jeton auprès de
+Supabase, transmet ce jeton **une seule fois** au serveur, qui le valide auprès de Supabase
+puis ouvre sa propre session admin. Les autres endpoints sont inchangés.
+
+⚠️ **Autorisation ≠ authentification** : `SUPABASE_ADMIN_EMAILS` / `SUPABASE_ADMIN_ROLE`
+déterminent *qui* est administrateur. Sans l'un des deux, n'importe quel compte de votre
+projet Supabase deviendrait admin — c'est pourquoi le serveur refuse de démarrer dans ce cas.
+
+Une fois validé, vous pouvez couper le code partagé :
+
+```bash
+ALLOW_ADMIN_CODE=false
+```
+
+Pour la redirection depuis votre domaine, voir [deploy/vercel-redirect.md](deploy/vercel-redirect.md).
+
 ## 7. Sécurité — le code administrateur
 
 Le code administrateur est vérifié **exclusivement côté serveur** (variable `ADMIN_CODE` du `.env`

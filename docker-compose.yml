@@ -11,6 +11,12 @@ services:
       DB_PATH: /data/paris2026.db
       UPLOADS_DIR: /data/uploads
       CORS_ORIGINS: ${CORS_ORIGINS:?Définissez CORS_ORIGINS dans .env}
+      # Authentification des admins par leurs comptes Supabase (optionnelle)
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
+      SUPABASE_ADMIN_EMAILS: ${SUPABASE_ADMIN_EMAILS:-}
+      SUPABASE_ADMIN_ROLE: ${SUPABASE_ADMIN_ROLE:-}
+      ALLOW_ADMIN_CODE: ${ALLOW_ADMIN_CODE:-true}
     volumes:
       - api_data:/data
     expose:

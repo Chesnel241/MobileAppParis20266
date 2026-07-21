@@ -67,11 +67,36 @@
     <div class="card">
       <div class="kicker">Convention Paris 2026</div>
       <h1>Espace administrateur</h1>
-      <p class="muted" style="margin:8px 0 18px">Organisateurs &amp; pasteurs — entrez le code administrateur.</p>
-      <label>Code administrateur</label>
-      <input id="code" type="password" autocomplete="off" placeholder="Code" />
-      <div id="loginErr" class="err hidden">Code incorrect.</div>
-      <button id="loginBtn" class="btn-primary" style="margin-top:16px">Se connecter</button>
+
+      <!-- Connexion par compte Supabase (mêmes comptes que dlwm-convention2026.fr) -->
+      <div id="loginSupabase" class="hidden">
+        <p class="muted" style="margin:8px 0 18px">
+          Connectez-vous avec votre compte organisateur du site de la convention.
+        </p>
+        <label for="email">Adresse e-mail</label>
+        <input id="email" type="email" autocomplete="username" placeholder="vous@exemple.fr" />
+        <label for="password" style="margin-top:12px">Mot de passe</label>
+        <input id="password" type="password" autocomplete="current-password" placeholder="Mot de passe" />
+        <button id="loginSupabaseBtn" class="btn-primary" style="margin-top:16px">Se connecter</button>
+      </div>
+
+      <!-- Repli : code administrateur partagé -->
+      <div id="loginCode" class="hidden">
+        <p class="muted" style="margin:8px 0 18px">Organisateurs &amp; pasteurs — entrez le code administrateur.</p>
+        <label for="code">Code administrateur</label>
+        <input id="code" type="password" autocomplete="off" placeholder="Code" />
+        <button id="loginBtn" class="btn-primary" style="margin-top:16px">Se connecter</button>
+      </div>
+
+      <div id="loginErr" class="err hidden"></div>
+
+      <!-- Bascule entre les deux méthodes, affichée seulement si les deux existent -->
+      <div id="loginSwitch" class="hidden" style="margin-top:14px;text-align:center">
+        <button id="loginSwitchBtn" class="ui-link"
+          style="background:none;border:0;color:var(--navy);font-size:13px;font-weight:600;text-decoration:underline;cursor:pointer">
+          Utiliser le code administrateur
+        </button>
+      </div>
     </div>
   </div>
 
@@ -146,18 +171,81 @@
   }
 
   // ---------- LOGIN ----------
+  // Méthodes de connexion disponibles, décidées par le serveur.
+  let authConfig = { codeEnabled: true, supabase: null };
+
+  function showLoginError(message) {
+    const el = document.getElementById('loginErr');
+    el.textContent = message;
+    el.classList.remove('hidden');
+  }
+  function clearLoginError() {
+    document.getElementById('loginErr').classList.add('hidden');
+  }
+
+  async function loadAuthConfig() {
+    try { authConfig = await api('/api/admin/auth-config'); }
+    catch { /* serveur injoignable : on garde le formulaire par code */ }
+
+    const hasSupabase = Boolean(authConfig.supabase);
+    const hasCode = Boolean(authConfig.codeEnabled);
+    // Supabase est proposé en premier quand il est configuré.
+    document.getElementById('loginSupabase').classList.toggle('hidden', !hasSupabase);
+    document.getElementById('loginCode').classList.toggle('hidden', hasSupabase || !hasCode);
+    document.getElementById('loginSwitch').classList.toggle('hidden', !(hasSupabase && hasCode));
+  }
+
+  document.getElementById('loginSwitchBtn').addEventListener('click', () => {
+    const codeShown = !document.getElementById('loginCode').classList.contains('hidden');
+    document.getElementById('loginCode').classList.toggle('hidden', codeShown);
+    document.getElementById('loginSupabase').classList.toggle('hidden', !codeShown);
+    document.getElementById('loginSwitchBtn').textContent = codeShown
+      ? 'Utiliser le code administrateur'
+      : 'Utiliser mon compte organisateur';
+    clearLoginError();
+  });
+
+  // Ouvre une session locale à partir d'un jeton Supabase validé par le serveur.
+  async function doSupabaseLogin() {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    if (!email || !password) return;
+    const btn = document.getElementById('loginSupabaseBtn');
+    btn.disabled = true;
+    clearLoginError();
+    try {
+      const res = await fetch(`${authConfig.supabase.url}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: authConfig.supabase.anonKey },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!res.ok) { showLoginError('E-mail ou mot de passe incorrect.'); return; }
+      const { access_token: accessToken } = await res.json();
+
+      const r = await api('/api/admin/login', { method: 'POST', body: { supabaseAccessToken: accessToken } });
+      sessionStorage.setItem(TOKEN_KEY, r.token);
+      document.getElementById('password').value = '';
+      showApp();
+    } catch (e) {
+      // 403 = compte valide mais non autorisé pour l'administration mobile
+      showLoginError(String(e.message).includes('403')
+        ? "Ce compte n'est pas autorisé à administrer l'application mobile."
+        : 'Connexion impossible. Réessayez.');
+    } finally { btn.disabled = false; }
+  }
+
   async function doLogin() {
     const code = document.getElementById('code').value.trim();
     if (!code) return;
     const btn = document.getElementById('loginBtn');
     btn.disabled = true;
+    clearLoginError();
     try {
       const r = await api('/api/admin/login', { method: 'POST', body: { code } });
       sessionStorage.setItem(TOKEN_KEY, r.token);
-      document.getElementById('loginErr').classList.add('hidden');
       showApp();
     } catch (e) {
-      document.getElementById('loginErr').classList.remove('hidden');
+      showLoginError('Code incorrect.');
     } finally { btn.disabled = false; }
   }
   async function logout(revoke = true) {
@@ -177,6 +265,10 @@
 
   document.getElementById('loginBtn').addEventListener('click', doLogin);
   document.getElementById('code').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  document.getElementById('loginSupabaseBtn').addEventListener('click', doSupabaseLogin);
+  for (const id of ['email', 'password']) {
+    document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') doSupabaseLogin(); });
+  }
   document.getElementById('logout').addEventListener('click', logout);
 
   // ---------- APP SHELL ----------
@@ -688,7 +780,10 @@
   }
 
   // ---------- BOOT ----------
-  if (token()) showApp().catch(() => logout());
+  // Détermine d'abord les méthodes de connexion offertes par le serveur.
+  loadAuthConfig().then(() => {
+    if (token()) showApp().catch(() => logout());
+  });
   </script>
 </body>
 </html>

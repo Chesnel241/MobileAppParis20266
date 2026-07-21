@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, extname } from 'node:path';
 import { mkdirSync, unlinkSync } from 'node:fs';
 import config from './config.js';
+import { fetchSupabaseUser, isAuthorizedAdmin, adminLabel } from './supabaseAuth.js';
 import db from './db.js';
 import { defaultContent, CONTENT_SECTIONS } from './defaults.js';
 import {
@@ -98,7 +99,9 @@ app.use((_req, res, next) => {
     "form-action 'self'",
     "img-src 'self' data: blob:",
     "media-src 'self'",
-    "connect-src 'self'",
+    // Le panneau d'administration s'authentifie auprès de Supabase : son origine
+    // doit être autorisée, sinon la CSP bloque la connexion.
+    `connect-src 'self'${config.supabase ? ` ${config.supabase.url}` : ''}`,
     "style-src 'self' 'unsafe-inline'",
     "script-src 'self' 'unsafe-inline'",
   ].join('; '));
@@ -116,6 +119,10 @@ app.use(express.json({ limit: '64kb', strict: false }));
 
 const now = () => new Date().toISOString();
 const token = () => randomBytes(24).toString('hex');
+
+// Express 4 ne capture pas les rejets des handlers async : sans ce wrapper,
+// une erreur levée dans un handler async laisserait la requête sans réponse.
+const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
 // ---- Limiteurs de débit (anti-abus / anti-force brute) ----
 const makeLimiter = (windowMs, max, message) => rateLimit({
@@ -274,17 +281,46 @@ app.get('/api/questions/mine', requireParticipant, (req, res) => {
 });
 
 // ---- Admin (organisateurs & pasteurs) ----
-app.post('/api/admin/login', loginLimiter, (req, res) => {
-  const { code } = validateAdminLoginInput(req.body);
-  if (!safeEqual(code, ADMIN_CODE)) {
-    return res.status(401).json({ error: 'bad_code' });
+// Indique au panneau d'administration quelles méthodes de connexion proposer.
+// Ne divulgue que des valeurs publiques (URL du projet et clé anonyme Supabase).
+app.get('/api/admin/auth-config', (_req, res) => {
+  res.json({
+    codeEnabled: config.allowAdminCode,
+    supabase: config.supabase
+      ? { url: config.supabase.url, anonKey: config.supabase.anonKey }
+      : null,
+  });
+});
+
+// Connexion administrateur : par compte Supabase existant (recommandé) ou par
+// code partagé. Dans les deux cas, une session admin locale est émise ensuite,
+// si bien que tous les autres endpoints restent inchangés.
+app.post('/api/admin/login', loginLimiter, asyncHandler(async (req, res) => {
+  const { code, supabaseAccessToken } = validateAdminLoginInput(req.body);
+
+  let grantedTo = null;
+
+  if (supabaseAccessToken) {
+    if (!config.supabase) return res.status(400).json({ error: 'supabase_not_configured' });
+    const user = await fetchSupabaseUser(supabaseAccessToken, config.supabase);
+    if (!user) return res.status(401).json({ error: 'bad_supabase_token' });
+    if (!isAuthorizedAdmin(user, config.supabase)) {
+      return res.status(403).json({ error: 'not_an_admin' });
+    }
+    grantedTo = adminLabel(user);
+  } else {
+    if (!config.allowAdminCode) return res.status(400).json({ error: 'code_login_disabled' });
+    if (!safeEqual(code, ADMIN_CODE)) return res.status(401).json({ error: 'bad_code' });
+    grantedTo = 'code partagé';
   }
+
   const t = token();
   const expires = new Date(Date.now() + ADMIN_SESSION_HOURS * 3600 * 1000).toISOString();
   db.prepare('INSERT INTO admin_sessions (token, created_at, expires_at) VALUES (?, ?, ?)')
     .run(t, now(), expires);
+  console.log(`[ADMIN] session ouverte pour ${grantedTo}`);
   res.json({ token: t, expiresAt: expires });
-});
+}));
 
 // Révoque immédiatement la session courante (et uniquement celle-ci).
 app.post('/api/admin/logout', requireAdmin, (req, res) => {
@@ -437,7 +473,7 @@ app.get('/api/admin/participants', requireAdmin, (_req, res) => {
 });
 
 // ---- Médias (admin) : fichiers audio des enseignements, photo de l'hôtel… ----
-app.post('/api/admin/media', uploadLimiter, requireAdmin, upload.single('file'), async (req, res) => {
+app.post('/api/admin/media', uploadLimiter, requireAdmin, upload.single('file'), asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'missing_file' });
   const kind = req.body?.kind === 'audio' ? 'audio' : 'image';
   const allowed = kind === 'audio' ? AUDIO_EXT : IMAGE_EXT;
@@ -451,11 +487,11 @@ app.post('/api/admin/media', uploadLimiter, requireAdmin, upload.single('file'),
     return res.status(201).json({ url: `/media/${name}` });
   }
   res.status(201).json({ url: `/media/${req.file.filename}` });
-});
+}));
 
 // ---- Pellicule (photos partagées par les participants) ----
 // Défense en profondeur : ré-encodage + suppression des métadonnées (GPS) côté serveur.
-app.post('/api/photos', uploadLimiter, requireParticipant, upload.single('photo'), async (req, res) => {
+app.post('/api/photos', uploadLimiter, requireParticipant, upload.single('photo'), asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'missing_file' });
   if (req.body?.consent !== 'true') {
     dropFile(req.file);
@@ -472,7 +508,7 @@ app.post('/api/photos', uploadLimiter, requireParticipant, upload.single('photo'
   db.prepare("INSERT INTO photos (id, participant_id, file, status, consent_at, created_at) VALUES (?, ?, ?, 'pending', ?, ?)")
     .run(id, req.participant.id, name, createdAt, createdAt);
   res.status(201).json({ id, url: `/media/${name}`, status: 'pending' });
-});
+}));
 
 app.get('/api/photos', requireParticipant, (_req, res) => {
   const rows = db.prepare(`

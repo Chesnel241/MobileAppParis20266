@@ -171,8 +171,11 @@ export function validateQuestionInput(value) {
 }
 
 export function validateAdminLoginInput(value) {
-  const input = object(value, 'body', ['code']);
-  return { code: string(input.code, 'code', { max: 256 }) };
+  // Deux modes exclusifs : jeton Supabase (comptes existants) ou code partagé.
+  const input = object(value, 'body', [], ['code', 'supabaseAccessToken']);
+  const supabaseAccessToken = optionalString(input.supabaseAccessToken, 'supabaseAccessToken', 4096);
+  if (supabaseAccessToken) return { code: null, supabaseAccessToken };
+  return { code: string(input.code, 'code', { max: 256 }), supabaseAccessToken: null };
 }
 
 export function validateNotificationInput(value) {
