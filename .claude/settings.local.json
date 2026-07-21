@@ -39,7 +39,10 @@
       "Bash(mkdir -p /tmp/p26final/up)",
       "Bash(DB_PATH=/tmp/p26final/db.sqlite UPLOADS_DIR=/tmp/p26final/up PORT=8094 ADMIN_CODE=FINALCODE node src/index.js)",
       "Bash(pkill -f \"PORT=8094\")",
-      "Bash(grep -iE \"node_modules|/data/|\\\\.db$|\\\\.env$|\\\\.env\\\\.local|\\\\.log$\")"
+      "Bash(grep -iE \"node_modules|/data/|\\\\.db$|\\\\.env$|\\\\.env\\\\.local|\\\\.log$\")",
+      "Bash(node scripts/check-store-listing.mjs)",
+      "Bash(awk 'NR>1 {print \"  \",$9,$5}')",
+      "Bash(git -c 'user.name=Chesnel Ekogha' -c user.email=ekoghachesneloff@gmail.com commit -q -m ' *)"
     ]
   }
 }
