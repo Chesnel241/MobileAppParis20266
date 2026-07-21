@@ -57,7 +57,8 @@
       "Bash(DB_PATH=/tmp/p26ui/db.sqlite UPLOADS_DIR=/tmp/p26ui/up PORT=8092 ADMIN_CODE='Paris#Admin2026!Secure' SUPABASE_URL=https://demo-projet.supabase.co SUPABASE_ANON_KEY=cle_anon_demo SUPABASE_ADMIN_EMAILS=organisateur@exemple.fr node src/index.js)",
       "Bash(pkill -f \"PORT=8092\")",
       "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\(Object.keys\\(p.dependencies\\).map\\(d=>'  '+d\\).join\\('\\\\n'\\)\\)\")",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(grep -vE \"^\\\\s*#|^\\\\s*$\" deploy.env.example)"
     ]
   }
 }
