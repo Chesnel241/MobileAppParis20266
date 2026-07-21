@@ -26,6 +26,7 @@ db.exec(`
     id             TEXT PRIMARY KEY,
     participant_id TEXT NOT NULL REFERENCES participants(id) ON DELETE CASCADE,
     text           TEXT NOT NULL,
+    consent_at     TEXT,
     status         TEXT NOT NULL DEFAULT 'pending',
     pastor_name    TEXT,
     place          TEXT,
@@ -75,6 +76,8 @@ db.exec(`
     id             TEXT PRIMARY KEY,
     participant_id TEXT NOT NULL REFERENCES participants(id) ON DELETE CASCADE,
     file           TEXT NOT NULL,
+    status         TEXT NOT NULL DEFAULT 'pending',
+    consent_at     TEXT,
     created_at     TEXT NOT NULL
   );
 
@@ -84,5 +87,21 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_questions_participant ON questions(participant_id);
   CREATE INDEX IF NOT EXISTS idx_questions_status ON questions(status);
 `);
+
+// Migration non destructive pour les bases créées avant l'ajout de la modération.
+// Les anciennes photos restent visibles ; toutes les nouvelles sont explicitement
+// insérées avec le statut "pending" par l'API.
+const photoColumns = db.prepare('PRAGMA table_info(photos)').all();
+if (!photoColumns.some(column => column.name === 'status')) {
+  db.exec("ALTER TABLE photos ADD COLUMN status TEXT NOT NULL DEFAULT 'approved'");
+}
+if (!photoColumns.some(column => column.name === 'consent_at')) {
+  db.exec('ALTER TABLE photos ADD COLUMN consent_at TEXT');
+}
+const questionColumns = db.prepare('PRAGMA table_info(questions)').all();
+if (!questionColumns.some(column => column.name === 'consent_at')) {
+  db.exec('ALTER TABLE questions ADD COLUMN consent_at TEXT');
+}
+db.exec('CREATE INDEX IF NOT EXISTS idx_photos_status_created ON photos(status, created_at)');
 
 export default db;

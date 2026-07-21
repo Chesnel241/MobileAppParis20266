@@ -5,11 +5,18 @@ import { API_ENABLED, fetchPhotos, uploadPhoto, mediaUrl } from '../data/api';
 // marquée du logo (filigrane public/uploads/watermark.png) avant l'envoi.
 
 const MAX_DIM = 1600;          // redimensionnement avant upload
+const MAX_SOURCE_BYTES = 20 * 1024 * 1024;
 const WATERMARK_RATIO = 0.32;  // largeur du filigrane vs largeur photo
 const WATERMARK_MARGIN = 0.03;
 
 async function watermarkFile(file) {
-  const img = await loadImage(URL.createObjectURL(file));
+  const objectUrl = URL.createObjectURL(file);
+  let img;
+  try {
+    img = await loadImage(objectUrl);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
   const scale = Math.min(1, MAX_DIM / Math.max(img.width, img.height));
   const w = Math.round(img.width * scale);
   const h = Math.round(img.height * scale);
@@ -48,8 +55,10 @@ function loadImage(src) {
 export default function PelliculeTab({ t, showToast }) {
   const [photos, setPhotos] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [consent, setConsent] = useState(false);
   const [viewer, setViewer] = useState(null);
   const inputRef = useRef(null);
+  const viewerRef = useRef(null);
 
   useEffect(() => {
     if (!API_ENABLED) return;
@@ -62,16 +71,39 @@ export default function PelliculeTab({ t, showToast }) {
     return () => { alive = false; clearInterval(id); };
   }, []);
 
+  useEffect(() => {
+    if (!viewer) return undefined;
+    const previouslyFocused = document.activeElement;
+    viewerRef.current?.focus();
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setViewer(null);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      previouslyFocused?.focus?.();
+    };
+  }, [viewer]);
+
   const onFile = async (e) => {
     const file = e.target.files && e.target.files[0];
     e.target.value = '';
     if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast(t('pellicule_invalid_file'));
+      return;
+    }
+    if (file.size > MAX_SOURCE_BYTES) {
+      showToast(t('pellicule_too_large'));
+      return;
+    }
     setUploading(true);
     showToast(t('pellicule_uploading'));
     try {
       const blob = await watermarkFile(file);
       const created = await uploadPhoto(blob);
       showToast(t('pellicule_sent'));
+      setConsent(false);
       const rows = await fetchPhotos();
       if (Array.isArray(rows)) setPhotos(rows);
       else if (created) setPhotos((p) => [created, ...p]);
@@ -99,26 +131,54 @@ export default function PelliculeTab({ t, showToast }) {
       {/* Caméra arrière par défaut ; l'utilisateur peut basculer en selfie dans l'appareil photo */}
       <input
         ref={inputRef}
+        id="pellicule-photo-input"
+        name="pellicule-photo"
         type="file"
         accept="image/*"
         capture="environment"
         onChange={onFile}
+        aria-label={t('pellicule_take')}
         style={{ display: 'none' }}
       />
 
-      <div
-        onClick={() => !uploading && inputRef.current && inputRef.current.click()}
+      <label htmlFor="pellicule-consent" style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '10px',
+        marginBottom: '14px',
+        color: 'rgba(18,23,42,0.72)',
+        fontSize: '12.5px',
+        lineHeight: 1.45
+      }}>
+        <input
+          id="pellicule-consent"
+          type="checkbox"
+          checked={consent}
+          onChange={(event) => setConsent(event.target.checked)}
+          disabled={uploading}
+          style={{ marginTop: '3px', flex: 'none' }}
+        />
+        <span>{t('pellicule_consent')}</span>
+      </label>
+
+      <button
+        type="button"
+        className="ui-button-reset"
+        onClick={() => consent && !uploading && inputRef.current?.click()}
+        disabled={uploading || !consent}
+        aria-busy={uploading}
         style={{
-          background: uploading ? 'rgba(18,23,42,0.15)' : '#EA4630',
-          color: uploading ? 'rgba(18,23,42,0.4)' : '#fff',
+          background: uploading || !consent ? 'rgba(18,23,42,0.15)' : '#EA4630',
+          color: uploading || !consent ? 'rgba(18,23,42,0.4)' : '#fff',
           fontWeight: 700,
           textAlign: 'center',
           padding: '14px',
           borderRadius: '100px',
-          cursor: uploading ? 'wait' : 'pointer',
-          marginBottom: '16px'
+          cursor: uploading ? 'wait' : (consent ? 'pointer' : 'not-allowed'),
+          marginBottom: '16px',
+          width: '100%'
         }}
-      >{uploading ? t('pellicule_uploading') : t('pellicule_take')}</div>
+      >{uploading ? t('pellicule_uploading') : t('pellicule_take')}</button>
 
       {photos.length === 0 && (
         <div style={{
@@ -136,9 +196,12 @@ export default function PelliculeTab({ t, showToast }) {
         gap: '6px'
       }}>
         {photos.map((p) => (
-          <div
+          <button
+            type="button"
+            className="ui-button-reset"
             key={p.id}
             onClick={() => setViewer(p)}
+            aria-label={`${t('pellicule_title')} — ${t('pellicule_by')} ${p.author || ''}`}
             style={{
               position: 'relative',
               paddingTop: '100%',
@@ -160,14 +223,18 @@ export default function PelliculeTab({ t, showToast }) {
                 objectFit: 'cover'
               }}
             />
-          </div>
+          </button>
         ))}
       </div>
 
       {/* Visionneuse plein écran */}
       {viewer && (
         <div
-          onClick={() => setViewer(null)}
+          ref={viewerRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="pellicule-viewer-title"
+          tabIndex={-1}
           style={{
             position: 'fixed',
             inset: 0,
@@ -180,31 +247,58 @@ export default function PelliculeTab({ t, showToast }) {
             padding: '20px'
           }}
         >
-          <img
-            src={mediaUrl(viewer.url)}
-            alt=""
+          <div id="pellicule-viewer-title" className="sr-only">{t('pellicule_title')}</div>
+          <button
+            type="button"
+            className="ui-button-reset"
+            onClick={() => setViewer(null)}
+            aria-label={t('modal_close')}
             style={{
-              maxWidth: '100%',
-              maxHeight: '80%',
-              borderRadius: '12px',
-              objectFit: 'contain'
+              position: 'absolute',
+              inset: 0,
+              width: '100%'
             }}
-          />
-          <div style={{
-            color: 'rgba(255,255,255,0.8)',
-            fontSize: '13px',
-            fontWeight: 600,
-            marginTop: '14px'
-          }}>
-            {t('pellicule_by')} {viewer.author}
-          </div>
-          <div style={{
-            color: 'rgba(255,255,255,0.45)',
-            fontSize: '12px',
-            marginTop: '4px'
-          }}>
-            {new Date(viewer.createdAt).toLocaleString()}
-          </div>
+          ></button>
+          <button
+            type="button"
+            className="ui-button-reset"
+            onClick={() => setViewer(null)}
+            aria-label={t('modal_close')}
+            style={{
+              position: 'relative',
+              zIndex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              maxWidth: '100%'
+            }}
+          >
+            <img
+              src={mediaUrl(viewer.url)}
+              alt={`${t('pellicule_title')} — ${t('pellicule_by')} ${viewer.author || ''}`}
+              style={{
+                maxWidth: '100%',
+                maxHeight: '80vh',
+                borderRadius: '12px',
+                objectFit: 'contain'
+              }}
+            />
+            <span style={{
+              color: 'rgba(255,255,255,0.8)',
+              fontSize: '13px',
+              fontWeight: 600,
+              marginTop: '14px'
+            }}>
+              {t('pellicule_by')} {viewer.author}
+            </span>
+            <span style={{
+              color: 'rgba(255,255,255,0.45)',
+              fontSize: '12px',
+              marginTop: '4px'
+            }}>
+              {new Date(viewer.createdAt).toLocaleString()}
+            </span>
+          </button>
         </div>
       )}
     </>

@@ -1,9 +1,23 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export default function AdminCodeModal({ t, onSubmit, onClose }) {
   const [code, setCode] = useState('');
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    const previouslyFocused = document.activeElement;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') onCloseRef.current();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      previouslyFocused?.focus?.();
+    };
+  }, []);
 
   const submit = () => {
     if (!code.trim() || loading) return;
@@ -19,7 +33,7 @@ export default function AdminCodeModal({ t, onSubmit, onClose }) {
   };
 
   return (
-    <div onClick={onClose} style={{
+    <div role="presentation" style={{
       position: 'absolute',
       inset: 0,
       background: 'rgba(14,27,56,0.55)',
@@ -29,14 +43,32 @@ export default function AdminCodeModal({ t, onSubmit, onClose }) {
       justifyContent: 'center',
       padding: '24px'
     }}>
-      <div onClick={(e) => e.stopPropagation()} style={{
+      <button
+        type="button"
+        className="ui-button-reset"
+        onClick={onClose}
+        aria-label={t('admin_modal_cancel')}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%'
+        }}
+      ></button>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="admin-dialog-title"
+        aria-describedby="admin-dialog-description"
+        style={{
         background: '#fff',
         borderRadius: '20px',
         padding: '22px',
         width: '100%',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        position: 'relative',
+        zIndex: 1
       }}>
-        <div style={{
+        <div aria-hidden="true" style={{
           width: '44px',
           height: '44px',
           borderRadius: '50%',
@@ -52,27 +84,32 @@ export default function AdminCodeModal({ t, onSubmit, onClose }) {
           </svg>
         </div>
 
-        <div style={{
+        <div id="admin-dialog-title" style={{
           fontFamily: "'Anton', sans-serif",
           fontSize: '18px',
           color: '#12172A',
           textTransform: 'uppercase'
         }}>{t('admin_modal_title')}</div>
 
-        <div style={{
+        <div id="admin-dialog-description" style={{
           fontSize: '13px',
           color: 'rgba(18,23,42,0.65)',
           marginTop: '8px',
           lineHeight: 1.5
         }}>{t('admin_modal_body')}</div>
 
+        <label className="sr-only" htmlFor="admin-code-input">{t('admin_modal_placeholder')}</label>
         <input
+          id="admin-code-input"
+          name="adminCode"
           value={code}
           onChange={(e) => { setCode(e.target.value); setError(false); }}
           onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
           type="password"
           autoFocus
           placeholder={t('admin_modal_placeholder')}
+          aria-invalid={error}
+          aria-describedby={error ? 'admin-dialog-description admin-code-error' : 'admin-dialog-description'}
           style={{
             width: '100%',
             padding: '13px 14px',
@@ -88,7 +125,7 @@ export default function AdminCodeModal({ t, onSubmit, onClose }) {
         />
 
         {error && (
-          <div style={{
+          <div id="admin-code-error" role="alert" style={{
             marginTop: '8px',
             color: '#EA4630',
             fontSize: '12.5px',
@@ -96,7 +133,12 @@ export default function AdminCodeModal({ t, onSubmit, onClose }) {
           }}>{t('admin_modal_error')}</div>
         )}
 
-        <div onClick={submit} style={{
+        <button
+          type="button"
+          className="ui-button-reset"
+          onClick={submit}
+          aria-disabled={!code.trim() || loading}
+          style={{
           marginTop: '16px',
           background: code.trim() && !loading ? '#0E1B38' : 'rgba(18,23,42,0.15)',
           color: code.trim() && !loading ? '#fff' : 'rgba(18,23,42,0.4)',
@@ -104,18 +146,20 @@ export default function AdminCodeModal({ t, onSubmit, onClose }) {
           textAlign: 'center',
           padding: '14px',
           borderRadius: '100px',
-          cursor: code.trim() && !loading ? 'pointer' : 'not-allowed'
-        }}>{loading ? '…' : t('admin_modal_submit')}</div>
+          cursor: code.trim() && !loading ? 'pointer' : 'not-allowed',
+          width: '100%'
+        }}>{loading ? '…' : t('admin_modal_submit')}</button>
 
-        <div onClick={onClose} style={{
+        <button type="button" className="ui-button-reset" onClick={onClose} style={{
           marginTop: '10px',
           textAlign: 'center',
           color: 'rgba(18,23,42,0.5)',
           fontSize: '13px',
           fontWeight: 600,
           padding: '8px',
-          cursor: 'pointer'
-        }}>{t('admin_modal_cancel')}</div>
+          cursor: 'pointer',
+          width: '100%'
+        }}>{t('admin_modal_cancel')}</button>
       </div>
     </div>
   );

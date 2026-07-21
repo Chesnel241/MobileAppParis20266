@@ -56,6 +56,8 @@ export const translations = {
     question_intro_body: "Vous avez une question théologique, pratique ou personnelle ? Soumettez-la ici et un pasteur y répondra lors d'une consultation privée.",
     question_placeholder: "Écrivez votre question ici...",
     question_submit: "Envoyer ma question",
+    question_submitting: "Envoi de la question…",
+    question_consent: "J'accepte que cette question, qui peut contenir des informations sensibles, soit transmise aux pasteurs autorisés pour organiser une consultation privée.",
     question_pending_title: "Question en attente",
     question_pending_body: "Votre question a bien été reçue. Un pasteur vous contactera bientôt.",
     question_pending_chip: "En attente",
@@ -133,6 +135,10 @@ export const translations = {
     notif_center_title: "Notifications",
     toast_reminder_added: "Rappel ajouté !",
     toast_reminder_removed: "Rappel retiré",
+    toast_reminder_failed: "Autorisez les notifications pour activer ce rappel.",
+    content_loading: "Chargement des informations de la convention…",
+    content_unavailable: "Les informations vérifiées sont momentanément indisponibles.",
+    content_retry: "Réessayer",
 
     // Onboarding
     onboarding_kicker: "CONVENTION PARIS 2026",
@@ -144,9 +150,12 @@ export const translations = {
     onboarding_country: "Pays de résidence",
     onboarding_country_placeholder: "Sélectionnez votre pays",
     onboarding_submit: "Commencer",
-    onboarding_footer: "Vos informations restent sur votre appareil.",
+    onboarding_submitting: "Création du profil…",
+    onboarding_footer: "Vos informations sont transmises de façon sécurisée à l'organisation.",
     onboarding_error_required: "Veuillez remplir tous les champs.",
     onboarding_error_phone: "Numéro de téléphone invalide.",
+    onboarding_error_network: "Connexion au serveur impossible. Vérifiez votre réseau et réessayez.",
+    onboarding_error_duplicate: "Ce profil existe déjà. Contactez l'organisation pour récupérer votre accès.",
 
     // Hébergement
     sejour_housing_title: "Mon hébergement",
@@ -161,13 +170,20 @@ export const translations = {
     pellicule_take: "📸 Ajouter une photo",
     pellicule_empty: "Aucune photo pour l'instant. Soyez le premier à immortaliser l'événement !",
     pellicule_uploading: "Envoi de la photo…",
-    pellicule_sent: "Photo partagée !",
+    pellicule_sent: "Photo envoyée pour validation avant publication.",
     pellicule_error: "Échec de l'envoi. Réessayez.",
     pellicule_offline: "La pellicule nécessite une connexion au serveur de l'événement.",
     pellicule_by: "par",
+    pellicule_consent: "Je consens à partager cette photo et mon prénom avec les autres participants.",
+    pellicule_invalid_file: "Le fichier sélectionné n'est pas une image valide.",
+    pellicule_too_large: "La photo dépasse la taille maximale de 20 Mo.",
 
     // Audios
     audio_unavailable: "Audio bientôt disponible",
+    audio_playback_error: "Lecture audio impossible sur cet appareil.",
+
+    question_sent_success: "Question envoyée avec succès.",
+    question_send_failed: "La question n'a pas été envoyée. Votre texte est conservé : réessayez une fois connecté.",
 
     // Admin access
     admin_modal_title: "Accès réservé",
@@ -177,6 +193,13 @@ export const translations = {
     admin_modal_cancel: "Annuler",
     admin_modal_error: "Code incorrect. Réessayez.",
     toast_admin_ok: "Accès administrateur déverrouillé",
+    admin_server_required: "L'accès administrateur nécessite une connexion sécurisée au serveur.",
+    account_delete: "Supprimer mon profil et mes données",
+    account_delete_confirm: "Supprimer définitivement votre profil, vos questions et vos photos ? Cette action est irréversible.",
+    account_delete_failed: "Suppression impossible. Vérifiez votre connexion et réessayez.",
+    organisateur_data_unavailable: "Données organisateur indisponibles. Aucune valeur fictive n'est affichée.",
+    organisateur_no_country_data: "Aucune donnée de pays disponible.",
+    admin_logout: "Fermer la session administrateur",
   },
   en: {
     // Navigation
@@ -235,6 +258,8 @@ export const translations = {
     question_intro_body: "Do you have a theological, practical or personal question? Submit it here and a pastor will answer during a private consultation.",
     question_placeholder: "Write your question here...",
     question_submit: "Submit my question",
+    question_submitting: "Submitting question…",
+    question_consent: "I agree that this question, which may contain sensitive information, is shared with authorized pastors to arrange a private consultation.",
     question_pending_title: "Question pending",
     question_pending_body: "Your question has been received. A pastor will contact you soon.",
     question_pending_chip: "Pending",
@@ -312,6 +337,10 @@ export const translations = {
     notif_center_title: "Notifications",
     toast_reminder_added: "Reminder added!",
     toast_reminder_removed: "Reminder removed",
+    toast_reminder_failed: "Allow notifications to enable this reminder.",
+    content_loading: "Loading verified convention information…",
+    content_unavailable: "Verified convention information is temporarily unavailable.",
+    content_retry: "Try again",
 
     // Onboarding
     onboarding_kicker: "PARIS CONVENTION 2026",
@@ -323,9 +352,12 @@ export const translations = {
     onboarding_country: "Country of residence",
     onboarding_country_placeholder: "Select your country",
     onboarding_submit: "Get started",
-    onboarding_footer: "Your information stays on your device.",
+    onboarding_submitting: "Creating profile…",
+    onboarding_footer: "Your information is securely sent to the organization.",
     onboarding_error_required: "Please fill in all fields.",
     onboarding_error_phone: "Invalid phone number.",
+    onboarding_error_network: "The server cannot be reached. Check your connection and try again.",
+    onboarding_error_duplicate: "This profile already exists. Contact the organization to recover access.",
 
     // Housing
     sejour_housing_title: "My accommodation",
@@ -340,13 +372,20 @@ export const translations = {
     pellicule_take: "📸 Add a photo",
     pellicule_empty: "No photos yet. Be the first to capture the event!",
     pellicule_uploading: "Uploading photo…",
-    pellicule_sent: "Photo shared!",
+    pellicule_sent: "Photo submitted for review before publication.",
     pellicule_error: "Upload failed. Try again.",
     pellicule_offline: "The photo wall requires a connection to the event server.",
     pellicule_by: "by",
+    pellicule_consent: "I consent to sharing this photo and my first name with other participants.",
+    pellicule_invalid_file: "The selected file is not a valid image.",
+    pellicule_too_large: "The photo exceeds the 20 MB size limit.",
 
     // Audios
     audio_unavailable: "Audio coming soon",
+    audio_playback_error: "Audio playback is unavailable on this device.",
+
+    question_sent_success: "Question sent successfully.",
+    question_send_failed: "The question was not sent. Your text was kept; try again when connected.",
 
     // Admin access
     admin_modal_title: "Restricted access",
@@ -356,6 +395,13 @@ export const translations = {
     admin_modal_cancel: "Cancel",
     admin_modal_error: "Incorrect code. Try again.",
     toast_admin_ok: "Administrator access unlocked",
+    admin_server_required: "Administrator access requires a secure connection to the server.",
+    account_delete: "Delete my profile and data",
+    account_delete_confirm: "Permanently delete your profile, questions and photos? This cannot be undone.",
+    account_delete_failed: "Deletion failed. Check your connection and try again.",
+    organisateur_data_unavailable: "Organizer data is unavailable. No sample values are displayed.",
+    organisateur_no_country_data: "No country data is available.",
+    admin_logout: "Sign out of administrator mode",
   }
 };
 

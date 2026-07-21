@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { PLACE_LABELS } from '../data/constants';
 
 export default function QuestionTab({
@@ -21,13 +22,24 @@ export default function QuestionTab({
   setAssignPastorName,
   confirmAssign
 }) {
+  const [consent, setConsent] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const modeParticipantBg = !pastorMode ? '#fff' : 'transparent';
   const modeParticipantFg = !pastorMode ? '#0E1B38' : 'rgba(18,23,42,0.5)';
   const modePastorBg = pastorMode ? '#fff' : 'transparent';
   const modePastorFg = pastorMode ? '#0E1B38' : 'rgba(18,23,42,0.5)';
 
-  const questionSubmitBg = questionDraft.trim() ? '#0E1B38' : 'rgba(18,23,42,0.15)';
-  const questionSubmitFg = questionDraft.trim() ? '#fff' : 'rgba(18,23,42,0.4)';
+  const canSubmitQuestion = Boolean(questionDraft.trim() && consent && !submitting);
+  const questionSubmitBg = canSubmitQuestion ? '#0E1B38' : 'rgba(18,23,42,0.15)';
+  const questionSubmitFg = canSubmitQuestion ? '#fff' : 'rgba(18,23,42,0.4)';
+
+  const handleSubmitQuestion = async () => {
+    if (!canSubmitQuestion) return;
+    setSubmitting(true);
+    const sent = await submitQuestion(true);
+    if (sent) setConsent(false);
+    setSubmitting(false);
+  };
 
   return (
     <>
@@ -38,7 +50,12 @@ export default function QuestionTab({
         padding: '4px',
         marginBottom: '18px'
       }}>
-        <div onClick={() => setPastorMode(false)} style={{
+        <button
+          type="button"
+          className="ui-button-reset"
+          onClick={() => setPastorMode(false)}
+          aria-pressed={!pastorMode}
+          style={{
           flex: 1,
           textAlign: 'center',
           padding: '10px',
@@ -48,9 +65,14 @@ export default function QuestionTab({
           cursor: 'pointer',
           background: modeParticipantBg,
           color: modeParticipantFg
-        }}>{t('question_mode_participant')}</div>
+        }}>{t('question_mode_participant')}</button>
 
-        <div onClick={() => setPastorMode(true)} style={{
+        <button
+          type="button"
+          className="ui-button-reset"
+          onClick={() => setPastorMode(true)}
+          aria-pressed={pastorMode}
+          style={{
           flex: 1,
           textAlign: 'center',
           padding: '10px',
@@ -60,7 +82,7 @@ export default function QuestionTab({
           cursor: 'pointer',
           background: modePastorBg,
           color: modePastorFg
-        }}>{t('question_mode_pastor')}</div>
+        }}>{t('question_mode_pastor')}</button>
       </div>
 
       {/* Participant mode */}
@@ -68,12 +90,13 @@ export default function QuestionTab({
         <>
           {!myQuestion && (
             <>
-              <div style={{
+              <label htmlFor="participant-question" style={{
+                display: 'block',
                 fontFamily: "'Anton', sans-serif",
                 fontSize: '19px',
                 color: '#12172A',
                 textTransform: 'uppercase'
-              }}>{t('question_intro_title')}</div>
+              }}>{t('question_intro_title')}</label>
 
               <div style={{
                 fontSize: '13.5px',
@@ -83,9 +106,12 @@ export default function QuestionTab({
               }}>{t('question_intro_body')}</div>
 
               <textarea
+                id="participant-question"
+                name="question"
                 value={questionDraft}
                 onChange={(e) => setQuestionDraft(e.target.value)}
                 placeholder={t('question_placeholder')}
+                maxLength={2000}
                 style={{
                   width: '100%',
                   minHeight: '120px',
@@ -101,7 +127,33 @@ export default function QuestionTab({
                 }}
               />
 
-              <div onClick={submitQuestion} style={{
+              <label htmlFor="question-consent" style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
+                marginTop: '12px',
+                color: 'rgba(18,23,42,0.72)',
+                fontSize: '12.5px',
+                lineHeight: 1.45,
+              }}>
+                <input
+                  id="question-consent"
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(event) => setConsent(event.target.checked)}
+                  disabled={submitting}
+                  style={{ marginTop: '3px', flex: 'none' }}
+                />
+                <span>{t('question_consent')}</span>
+              </label>
+
+              <button
+                type="button"
+                className="ui-button-reset"
+                onClick={handleSubmitQuestion}
+                disabled={!canSubmitQuestion}
+                aria-busy={submitting}
+                style={{
                 marginTop: '12px',
                 background: questionSubmitBg,
                 color: questionSubmitFg,
@@ -109,8 +161,9 @@ export default function QuestionTab({
                 textAlign: 'center',
                 padding: '15px',
                 borderRadius: '100px',
-                cursor: questionDraft.trim() ? 'pointer' : 'not-allowed'
-              }}>{t('question_submit')}</div>
+                cursor: canSubmitQuestion ? 'pointer' : 'not-allowed',
+                width: '100%'
+              }}>{submitting ? t('question_submitting') : t('question_submit')}</button>
             </>
           )}
 
@@ -273,15 +326,20 @@ export default function QuestionTab({
                 </div>
               </div>
 
-              <div onClick={() => setMyQuestion(null)} style={{
+              <button
+                type="button"
+                className="ui-button-reset"
+                onClick={() => setMyQuestion(null)}
+                style={{
                 marginTop: '14px',
                 textAlign: 'center',
                 color: 'rgba(18,23,42,0.5)',
                 fontSize: '13px',
                 fontWeight: 600,
                 padding: '10px',
-                cursor: 'pointer'
-              }}>{t('question_ask_new')}</div>
+                cursor: 'pointer',
+                width: '100%'
+              }}>{t('question_ask_new')}</button>
             </>
           )}
         </>
@@ -343,7 +401,13 @@ export default function QuestionTab({
                 }}>{q.text}</div>
 
                 {isNew && !showForm && (
-                  <div onClick={() => setAssigningId(q.id)} style={{
+                  <button
+                    type="button"
+                    className="ui-button-reset"
+                    onClick={() => setAssigningId(q.id)}
+                    aria-expanded={showForm}
+                    aria-controls={`assignment-form-${q.id}`}
+                    style={{
                     marginTop: '12px',
                     display: 'inline-block',
                     background: '#0E1B38',
@@ -353,7 +417,7 @@ export default function QuestionTab({
                     padding: '9px 16px',
                     borderRadius: '100px',
                     cursor: 'pointer'
-                  }}>{t('pastor_assign_btn')}</div>
+                  }}>{t('pastor_assign_btn')}</button>
                 )}
 
                 {isAssigned && (
@@ -377,19 +441,22 @@ export default function QuestionTab({
                 )}
 
                 {showForm && (
-                  <div style={{
+                  <div id={`assignment-form-${q.id}`} style={{
                     marginTop: '12px',
                     paddingTop: '12px',
                     borderTop: '1px solid rgba(18,23,42,0.08)'
                   }}>
-                    <div style={{
+                    <label htmlFor={`assignment-place-${q.id}`} style={{
+                      display: 'block',
                       fontSize: '11px',
                       fontWeight: 700,
                       color: 'rgba(18,23,42,0.5)',
                       textTransform: 'uppercase',
                       marginBottom: '4px'
-                    }}>{t('pastor_form_place_label')}</div>
+                    }}>{t('pastor_form_place_label')}</label>
                     <select
+                      id={`assignment-place-${q.id}`}
+                      name="assignmentPlace"
                       value={assignPlace}
                       onChange={(e) => setAssignPlace(e.target.value)}
                       style={{
@@ -409,14 +476,17 @@ export default function QuestionTab({
                       <option value="office">{PLACE_LABELS.office[lang]}</option>
                     </select>
 
-                    <div style={{
+                    <label htmlFor={`assignment-time-${q.id}`} style={{
+                      display: 'block',
                       fontSize: '11px',
                       fontWeight: 700,
                       color: 'rgba(18,23,42,0.5)',
                       textTransform: 'uppercase',
                       marginBottom: '4px'
-                    }}>{t('pastor_form_time_label')}</div>
+                    }}>{t('pastor_form_time_label')}</label>
                     <select
+                      id={`assignment-time-${q.id}`}
+                      name="assignmentTime"
                       value={assignTime}
                       onChange={(e) => setAssignTime(e.target.value)}
                       style={{
@@ -437,14 +507,17 @@ export default function QuestionTab({
                       <option value="18h30 – 18h50">18h30 – 18h50</option>
                     </select>
 
-                    <div style={{
+                    <label htmlFor={`assignment-pastor-${q.id}`} style={{
+                      display: 'block',
                       fontSize: '11px',
                       fontWeight: 700,
                       color: 'rgba(18,23,42,0.5)',
                       textTransform: 'uppercase',
                       marginBottom: '4px'
-                    }}>{t('pastor_form_name_label')}</div>
+                    }}>{t('pastor_form_name_label')}</label>
                     <input
+                      id={`assignment-pastor-${q.id}`}
+                      name="pastorName"
                       value={assignPastorName}
                       onChange={(e) => setAssignPastorName(e.target.value)}
                       style={{
@@ -459,7 +532,12 @@ export default function QuestionTab({
                       }}
                     />
 
-                    <div onClick={confirmAssign} style={{
+                    <button
+                      type="button"
+                      className="ui-button-reset"
+                      onClick={confirmAssign}
+                      aria-disabled={!(assignPlace && assignTime && assignPastorName.trim())}
+                      style={{
                       background: '#EA4630',
                       color: '#fff',
                       textAlign: 'center',
@@ -467,8 +545,9 @@ export default function QuestionTab({
                       fontSize: '13.5px',
                       padding: '12px',
                       borderRadius: '100px',
-                      cursor: 'pointer'
-                    }}>{t('pastor_confirm_btn')}</div>
+                      cursor: 'pointer',
+                      width: '100%'
+                    }}>{t('pastor_confirm_btn')}</button>
                   </div>
                 )}
               </div>

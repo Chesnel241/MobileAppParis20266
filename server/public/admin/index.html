@@ -95,12 +95,12 @@
   let currentSection = 'programme';
 
   // ---------- API ----------
-  const token = () => localStorage.getItem(TOKEN_KEY);
+  const token = () => sessionStorage.getItem(TOKEN_KEY);
   async function api(path, opts = {}) {
     const headers = { 'Content-Type': 'application/json' };
     if (opts.auth) headers.Authorization = 'Bearer ' + token();
     const res = await fetch(path, { method: opts.method || 'GET', headers, body: opts.body ? JSON.stringify(opts.body) : undefined });
-    if (res.status === 401) { logout(); throw new Error('unauthorized'); }
+    if (res.status === 401) { logout(false); throw new Error('unauthorized'); }
     if (!res.ok) throw new Error('http_' + res.status);
     const ct = res.headers.get('content-type') || '';
     return ct.includes('json') ? res.json() : null;
@@ -117,7 +117,6 @@
     const n = document.createElement(tag);
     for (const k in props) {
       if (k === 'class') n.className = props[k];
-      else if (k === 'html') n.innerHTML = props[k];
       else if (k.startsWith('on')) n.addEventListener(k.slice(2), props[k]);
       else if (k === 'value') n.value = props[k];
       else n.setAttribute(k, props[k]);
@@ -154,15 +153,24 @@
     btn.disabled = true;
     try {
       const r = await api('/api/admin/login', { method: 'POST', body: { code } });
-      localStorage.setItem(TOKEN_KEY, r.token);
+      sessionStorage.setItem(TOKEN_KEY, r.token);
       document.getElementById('loginErr').classList.add('hidden');
       showApp();
     } catch (e) {
       document.getElementById('loginErr').classList.remove('hidden');
     } finally { btn.disabled = false; }
   }
-  function logout() {
-    localStorage.removeItem(TOKEN_KEY);
+  async function logout(revoke = true) {
+    const currentToken = token();
+    if (revoke && currentToken) {
+      try {
+        await fetch('/api/admin/logout', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + currentToken },
+        });
+      } catch { /* la fermeture locale reste prioritaire */ }
+    }
+    sessionStorage.removeItem(TOKEN_KEY);
     document.getElementById('app').classList.add('hidden');
     document.getElementById('login').classList.remove('hidden');
   }
@@ -258,10 +266,12 @@
       .forEach(n => m.appendChild(n));
 
     // Compte à rebours
+    const toParisInput = value => String(value || '').slice(0, 16);
+    const withParisOffset = value => value ? value + '+02:00' : '';
     const cd = { v: content.countdownTargetISO };
     const cardCd = el('div', { class: 'card' }, [
       field('Début de l’événement (compte à rebours)',
-        el('input', { type: 'datetime-local', value: content.countdownTargetISO, oninput: e => { cd.v = e.target.value; } }))
+        el('input', { type: 'datetime-local', value: toParisInput(content.countdownTargetISO), oninput: e => { cd.v = withParisOffset(e.target.value); } }))
     ]);
     m.appendChild(el('h3', { style: 'margin:6px 0 8px' }, 'Compte à rebours'));
     m.appendChild(cardCd);
@@ -305,8 +315,8 @@
           el('div', { class: 'row c2' }, [
             field('Jour', bind(s, 'dayId', { type: 'select', options: dayOptions() })),
             field('Catégorie (tag)', bind(s, 'tag')),
-            field('Début', el('input', { type: 'datetime-local', value: s.startISO, oninput: e => { s.startISO = e.target.value; } })),
-            field('Fin', el('input', { type: 'datetime-local', value: s.endISO, oninput: e => { s.endISO = e.target.value; } })),
+            field('Début (heure de Paris)', el('input', { type: 'datetime-local', value: toParisInput(s.startISO), oninput: e => { s.startISO = withParisOffset(e.target.value); } })),
+            field('Fin (heure de Paris)', el('input', { type: 'datetime-local', value: toParisInput(s.endISO), oninput: e => { s.endISO = withParisOffset(e.target.value); } })),
           ]),
           el('div', { class: 'row c2' }, [
             field('Titre FR', bind(s, 'tFr')), field('Titre EN', bind(s, 'tEn')),
@@ -447,8 +457,7 @@
 
   // ---------- LOGEMENTS ----------
   async function secLogements(m) {
-    header('Logements', 'Personnes prises en charge par l’organisation. Importez la liste, assignez les adresses ; '
-      + 'la liaison avec les comptes de l’app est automatique (téléphone ou nom), corrigeable ici à tout moment.')
+    header('Logements', 'Personnes prises en charge par l’organisation. Importez la liste puis liez chaque ligne manuellement au bon compte participant.')
       .forEach(n => m.appendChild(n));
 
     // ---- Import ----
@@ -490,7 +499,7 @@
           if (!rows.length) return toast('Aucune ligne à importer');
           try {
             const r = await api('/api/admin/housing/import', { method: 'POST', auth: true, body: { rows } });
-            toast(`${r.created} importé(s), ${r.linked} lié(s) automatiquement`);
+            toast(`${r.created} importé(s). Liaison manuelle requise.`);
             renderSection('logements');
           } catch (e) { toast('Erreur : ' + e.message); }
         } }, 'Importer'),
@@ -579,7 +588,7 @@
 
   // ---------- PELLICULE (modération) ----------
   async function secPellicule(m) {
-    header('Pellicule', 'Photos partagées par les participants. Supprimez celles qui ne conviennent pas.')
+    header('Pellicule', 'Les nouvelles photos restent invisibles aux participants tant qu’elles ne sont pas approuvées.')
       .forEach(n => m.appendChild(n));
     const grid = el('div', { style: 'display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px' });
     m.appendChild(grid);
@@ -590,7 +599,12 @@
         grid.appendChild(el('div', { class: 'card', style: 'padding:8px;margin:0' }, [
           el('img', { src: r.url, style: 'width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px' }),
           el('div', { class: 'muted', style: 'margin:6px 0 4px;font-size:12px' },
-            r.author + ' · ' + new Date(r.createdAt).toLocaleString('fr-FR')),
+            r.author + ' · ' + new Date(r.createdAt).toLocaleString('fr-FR') + ' · ' + (r.status === 'pending' ? 'En attente' : 'Approuvée')),
+          r.status === 'pending' ? el('button', { class: 'add', style: 'margin-right:8px', onclick: async () => {
+            await api('/api/admin/photos/' + r.id + '/approve', { method: 'POST', auth: true });
+            toast('Photo approuvée ✓');
+            renderSection('pellicule');
+          } }, 'Approuver') : null,
           el('button', { class: 'del', style: 'position:static', onclick: async () => {
             if (!confirm('Supprimer cette photo ?')) return;
             await api('/api/admin/photos/' + r.id, { method: 'DELETE', auth: true });

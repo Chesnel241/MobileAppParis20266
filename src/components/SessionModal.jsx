@@ -1,7 +1,26 @@
+import { useEffect, useRef } from 'react';
 import { sessionTimeRange } from '../data/defaultContent';
 
 export default function SessionModal({ sessionId, content, onClose, lang, t, reminders, toggleReminder }) {
+  const dialogRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   const session = (content.sessions || []).find(s => s.id === sessionId);
+
+  useEffect(() => {
+    if (!session) return undefined;
+    const previouslyFocused = document.activeElement;
+    dialogRef.current?.focus();
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') onCloseRef.current();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      previouslyFocused?.focus?.();
+    };
+  }, [session]);
+
   if (!session) return null;
 
   const title = lang === 'fr' ? session.tFr : session.tEn;
@@ -22,13 +41,20 @@ export default function SessionModal({ sessionId, content, onClose, lang, t, rem
       flexDirection: 'column',
       justifyContent: 'flex-end'
     }}>
-      <div onClick={onClose} style={{
+      <button type="button" className="ui-button-reset" onClick={onClose} aria-label={t('modal_close')} style={{
         position: 'absolute',
         inset: 0,
-        background: 'rgba(14,27,56,0.55)'
-      }}></div>
+        background: 'rgba(14,27,56,0.55)',
+        width: '100%'
+      }}></button>
 
-      <div style={{
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="session-dialog-title"
+        tabIndex={-1}
+        style={{
         position: 'relative',
         background: '#fff',
         borderRadius: '24px 24px 0 0',
@@ -37,7 +63,7 @@ export default function SessionModal({ sessionId, content, onClose, lang, t, rem
         maxHeight: '80%',
         overflow: 'auto'
       }}>
-        <div style={{
+        <div aria-hidden="true" style={{
           width: '40px',
           height: '5px',
           borderRadius: '3px',
@@ -45,7 +71,7 @@ export default function SessionModal({ sessionId, content, onClose, lang, t, rem
           margin: '0 auto 16px'
         }}></div>
 
-        <div style={{
+        <div id="session-dialog-title" style={{
           fontFamily: "'Anton', sans-serif",
           fontSize: '19px',
           color: '#12172A',
@@ -89,7 +115,12 @@ export default function SessionModal({ sessionId, content, onClose, lang, t, rem
           }}>{location}</div>
         </div>
 
-        <div onClick={() => toggleReminder(sessionId)} style={{
+        <button
+          type="button"
+          className="ui-button-reset"
+          onClick={() => toggleReminder(sessionId)}
+          aria-pressed={hasReminder}
+          style={{
           marginTop: '20px',
           display: 'flex',
           alignItems: 'center',
@@ -101,24 +132,26 @@ export default function SessionModal({ sessionId, content, onClose, lang, t, rem
           fontSize: '14px',
           padding: '14px',
           borderRadius: '100px',
-          cursor: 'pointer'
+          cursor: 'pointer',
+          width: '100%'
         }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path>
             <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
           </svg>
           <span>{reminderLabel}</span>
-        </div>
+        </button>
 
-        <div onClick={onClose} style={{
+        <button type="button" className="ui-button-reset" onClick={onClose} style={{
           marginTop: '8px',
           textAlign: 'center',
           color: 'rgba(18,23,42,0.5)',
           fontSize: '13px',
           fontWeight: 600,
           padding: '10px',
-          cursor: 'pointer'
-        }}>{t('modal_close')}</div>
+          cursor: 'pointer',
+          width: '100%'
+        }}>{t('modal_close')}</button>
       </div>
     </div>
   );

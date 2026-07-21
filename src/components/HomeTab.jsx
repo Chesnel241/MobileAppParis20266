@@ -17,7 +17,7 @@ export default function HomeTab({
 
   return (
     <>
-      <div onClick={onViewProgramme} style={{
+      <button type="button" className="ui-button-reset" onClick={onViewProgramme} style={{
         marginBottom: '14px',
         display: 'flex',
         alignItems: 'center',
@@ -29,13 +29,14 @@ export default function HomeTab({
         fontSize: '13.5px',
         padding: '12px',
         borderRadius: '100px',
-        cursor: 'pointer'
+        cursor: 'pointer',
+        width: '100%'
       }}>
         <span>{t('home_view_programme')}</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M9 6l6 6-6 6"></path>
         </svg>
-      </div>
+      </button>
 
       <div style={{
         fontFamily: "'Anton', sans-serif",
@@ -99,18 +100,24 @@ export default function HomeTab({
         marginBottom: '20px'
       }}>
         {upcomingSessions.map((session, idx) => (
-          <div
+          <button
+            type="button"
+            className="ui-button-reset"
             key={session.id}
             onClick={() => openSession(session.id)}
+            aria-label={`${lang === 'fr' ? session.tFr : session.tEn}, ${sessionTimeRange(session)}`}
             style={{
               display: 'flex',
               gap: '12px',
               padding: '13px 14px',
               borderBottom: idx < upcomingSessions.length - 1 ? '1px solid rgba(18,23,42,0.06)' : 'none',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              width: '100%',
+              textAlign: 'left'
             }}
           >
-            <div style={{
+            <span style={{
+              display: 'block',
               fontSize: '11.5px',
               fontWeight: 700,
               color: '#EA4630',
@@ -118,20 +125,22 @@ export default function HomeTab({
               flex: 'none'
             }}>
               {sessionTimeRange(session).split(' - ')[0]}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{
+            </span>
+            <span style={{ display: 'block', flex: 1, minWidth: 0 }}>
+              <span style={{
+                display: 'block',
                 fontSize: '13.5px',
                 fontWeight: 600,
                 color: '#12172A'
-              }}>{lang === 'fr' ? session.tFr : session.tEn}</div>
-              <div style={{
+              }}>{lang === 'fr' ? session.tFr : session.tEn}</span>
+              <span style={{
+                display: 'block',
                 fontSize: '11.5px',
                 color: 'rgba(18,23,42,0.5)',
                 marginTop: '2px'
-              }}>{lang === 'fr' ? session.locFr : session.locEn}</div>
-            </div>
-          </div>
+              }}>{lang === 'fr' ? session.locFr : session.locEn}</span>
+            </span>
+          </button>
         ))}
 
         {upcomingSessions.length === 0 && (
@@ -149,7 +158,9 @@ export default function HomeTab({
 
 function QuickActionCard({ onClick, icon, label }) {
   return (
-    <div onClick={onClick} style={{
+    <button type="button" className="ui-button-reset" onClick={onClick} aria-label={label} style={{
+      display: 'block',
+      width: '100%',
       background: '#fff',
       borderRadius: '16px',
       padding: '14px 6px',
@@ -157,7 +168,7 @@ function QuickActionCard({ onClick, icon, label }) {
       border: '1px solid rgba(18,23,42,0.06)',
       cursor: 'pointer'
     }}>
-      <div style={{
+      <span style={{
         width: '38px',
         height: '38px',
         borderRadius: '11px',
@@ -168,14 +179,15 @@ function QuickActionCard({ onClick, icon, label }) {
         margin: '0 auto 8px'
       }}>
         {icon}
-      </div>
-      <div style={{
+      </span>
+      <span style={{
+        display: 'block',
         fontSize: '10.5px',
         fontWeight: 600,
         color: '#12172A',
         lineHeight: '1.25'
-      }}>{label}</div>
-    </div>
+      }}>{label}</span>
+    </button>
   );
 }
 

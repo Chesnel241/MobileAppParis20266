@@ -14,6 +14,7 @@ const inputStyle = {
 };
 
 const labelStyle = {
+  display: 'block',
   fontSize: '11px',
   fontWeight: 700,
   color: 'rgba(18,23,42,0.5)',
@@ -28,10 +29,13 @@ export default function OnboardingScreen({ t, lang, onLangFr, onLangEn, onComple
   const [phone, setPhone] = useState('');
   const [country, setCountry] = useState('');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const canSubmit = firstName.trim() && lastName.trim() && phone.trim() && country;
 
-  const submit = () => {
+  const submit = async (event) => {
+    event?.preventDefault();
+    if (submitting) return;
     if (!canSubmit) {
       setError(t('onboarding_error_required'));
       return;
@@ -42,19 +46,32 @@ export default function OnboardingScreen({ t, lang, onLangFr, onLangEn, onComple
       return;
     }
     const countryEntry = COUNTRIES.find(c => c.code === country);
-    onComplete({
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      phone: phone.trim(),
-      country: country,
-      countryLabel: countryEntry ? countryEntry[lang] : country,
-      createdAt: new Date().toISOString()
-    });
+    setSubmitting(true);
+    setError('');
+    try {
+      const result = await onComplete({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        phone: phone.trim(),
+        country: country,
+        countryLabel: countryEntry ? countryEntry[lang] : country,
+        createdAt: new Date().toISOString()
+      });
+      if (!result?.ok) {
+        setError(t(result?.reason === 'duplicate'
+          ? 'onboarding_error_duplicate'
+          : 'onboarding_error_network'));
+      }
+    } catch {
+      setError(t('onboarding_error_network'));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <div style={{
-      height: '100vh',
+      height: '100dvh',
       display: 'flex',
       flexDirection: 'column',
       background: '#0E1B38',
@@ -80,15 +97,23 @@ export default function OnboardingScreen({ t, lang, onLangFr, onLangEn, onComple
           padding: '3px'
         }}>
           {[['fr', 'FR', onLangFr], ['en', 'EN', onLangEn]].map(([code, label, onClick]) => (
-            <div key={code} onClick={onClick} style={{
-              padding: '5px 12px',
-              borderRadius: '100px',
-              fontSize: '11px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              background: lang === code ? '#F2E94E' : 'transparent',
-              color: lang === code ? '#12172A' : 'rgba(255,255,255,0.7)'
-            }}>{label}</div>
+            <button
+              key={code}
+              type="button"
+              className="ui-button-reset"
+              onClick={onClick}
+              aria-pressed={lang === code}
+              aria-label={code === 'fr' ? 'Français' : 'English'}
+              style={{
+                padding: '5px 12px',
+                borderRadius: '100px',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                background: lang === code ? '#F2E94E' : 'transparent',
+                color: lang === code ? '#12172A' : 'rgba(255,255,255,0.7)'
+              }}
+            >{label}</button>
           ))}
         </div>
       </div>
@@ -118,43 +143,66 @@ export default function OnboardingScreen({ t, lang, onLangFr, onLangEn, onComple
       </div>
 
       {/* Formulaire */}
-      <div style={{
+      <form onSubmit={submit} style={{
         background: '#F7F5EF',
         borderRadius: '24px 24px 0 0',
         padding: '22px 22px calc(28px + env(safe-area-inset-bottom))',
         flex: 1
       }}>
-        <div style={labelStyle}>{t('onboarding_lastname')}</div>
+        <label htmlFor="onboarding-last-name" style={labelStyle}>{t('onboarding_lastname')}</label>
         <input
+          id="onboarding-last-name"
+          name="lastName"
           value={lastName}
           onChange={(e) => { setLastName(e.target.value); setError(''); }}
           autoComplete="family-name"
+          required
+          maxLength={80}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? 'onboarding-error' : undefined}
           style={inputStyle}
         />
 
-        <div style={labelStyle}>{t('onboarding_firstname')}</div>
+        <label htmlFor="onboarding-first-name" style={labelStyle}>{t('onboarding_firstname')}</label>
         <input
+          id="onboarding-first-name"
+          name="firstName"
           value={firstName}
           onChange={(e) => { setFirstName(e.target.value); setError(''); }}
           autoComplete="given-name"
+          required
+          maxLength={80}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? 'onboarding-error' : undefined}
           style={inputStyle}
         />
 
-        <div style={labelStyle}>{t('onboarding_phone')}</div>
+        <label htmlFor="onboarding-phone" style={labelStyle}>{t('onboarding_phone')}</label>
         <input
+          id="onboarding-phone"
+          name="phone"
           value={phone}
           onChange={(e) => { setPhone(e.target.value); setError(''); }}
           type="tel"
           inputMode="tel"
           autoComplete="tel"
+          required
+          maxLength={32}
           placeholder="+33 6 12 34 56 78"
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? 'onboarding-error' : undefined}
           style={inputStyle}
         />
 
-        <div style={labelStyle}>{t('onboarding_country')}</div>
+        <label htmlFor="onboarding-country" style={labelStyle}>{t('onboarding_country')}</label>
         <select
+          id="onboarding-country"
+          name="country"
           value={country}
           onChange={(e) => { setCountry(e.target.value); setError(''); }}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? 'onboarding-error' : undefined}
+          required
           style={{ ...inputStyle, appearance: 'auto' }}
         >
           <option value="">{t('onboarding_country_placeholder')}</option>
@@ -164,7 +212,7 @@ export default function OnboardingScreen({ t, lang, onLangFr, onLangEn, onComple
         </select>
 
         {error && (
-          <div style={{
+          <div id="onboarding-error" role="alert" style={{
             marginTop: '12px',
             color: '#EA4630',
             fontSize: '12.5px',
@@ -172,16 +220,23 @@ export default function OnboardingScreen({ t, lang, onLangFr, onLangEn, onComple
           }}>{error}</div>
         )}
 
-        <div onClick={submit} style={{
-          marginTop: '20px',
-          background: canSubmit ? '#0E1B38' : 'rgba(18,23,42,0.15)',
-          color: canSubmit ? '#fff' : 'rgba(18,23,42,0.4)',
-          fontWeight: 700,
-          textAlign: 'center',
-          padding: '15px',
-          borderRadius: '100px',
-          cursor: canSubmit ? 'pointer' : 'not-allowed'
-        }}>{t('onboarding_submit')}</div>
+        <button
+          type="submit"
+          className="ui-button-reset"
+          disabled={!canSubmit || submitting}
+          aria-busy={submitting}
+          style={{
+            marginTop: '20px',
+            background: canSubmit && !submitting ? '#0E1B38' : 'rgba(18,23,42,0.15)',
+            color: canSubmit && !submitting ? '#fff' : 'rgba(18,23,42,0.4)',
+            fontWeight: 700,
+            textAlign: 'center',
+            padding: '15px',
+            borderRadius: '100px',
+            cursor: canSubmit && !submitting ? 'pointer' : 'not-allowed',
+            width: '100%'
+          }}
+        >{submitting ? t('onboarding_submitting') : t('onboarding_submit')}</button>
 
         <div style={{
           marginTop: '14px',
@@ -195,7 +250,7 @@ export default function OnboardingScreen({ t, lang, onLangFr, onLangEn, onComple
             textDecoration: 'underline'
           }}>{t('about_privacy_link')}</a>
         </div>
-      </div>
+      </form>
     </div>
   );
 }

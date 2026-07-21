@@ -5,9 +5,13 @@
   "type": "module",
   "description": "API de synchronisation Convention Paris 2026 (LWMF&D)",
   "main": "src/index.js",
+  "engines": {
+    "node": ">=20 <23"
+  },
   "scripts": {
     "start": "node src/index.js",
-    "dev": "node --watch src/index.js"
+    "dev": "node --watch src/index.js",
+    "test": "node --test --test-concurrency=1"
   },
   "dependencies": {
     "better-sqlite3": "^11.8.1",

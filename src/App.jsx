@@ -1,14 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
-import { ADMIN_CODE, STORAGE_PROFILE_KEY, STORAGE_ADMIN_KEY, PLACE_LABELS } from './data/constants';
+import { STORAGE_PROFILE_KEY, STORAGE_LANGUAGE_KEY, STORAGE_REMINDERS_KEY, PLACE_LABELS } from './data/constants';
 import { defaultContent, upcomingSessions } from './data/defaultContent';
+import { assertValidContent } from './data/contentValidation';
 import { t as translate } from './data/translations';
 import {
   API_ENABLED,
+  getParticipantToken,
+  clearParticipantToken,
   registerParticipant,
+  fetchMyProfile,
   submitQuestionApi,
   fetchMyQuestions,
   adminLogin,
+  adminLogout,
   fetchAdminQuestions,
   assignQuestionApi,
   fetchAdminStats,
@@ -16,8 +21,10 @@ import {
   fetchContent,
   fetchNotifications,
   fetchMyHousing,
+  deleteMyAccount,
   mediaUrl,
 } from './data/api';
+import { cancelSessionReminder, scheduleSessionReminder } from './native';
 
 // "il y a 2h", "hier"… à partir d'une date ISO
 function relativeTime(iso, lang) {
@@ -48,16 +55,40 @@ import Toast from './components/Toast';
 const loadProfile = () => {
   try {
     const raw = localStorage.getItem(STORAGE_PROFILE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    // Une ancienne installation ayant sauvegardé le profil avant d'obtenir un
+    // jeton serveur doit repasser par une inscription explicite et réparable.
+    if (API_ENABLED && !getParticipantToken()) {
+      localStorage.removeItem(STORAGE_PROFILE_KEY);
+      return null;
+    }
+    return JSON.parse(raw);
   } catch {
     return null;
+  }
+};
+
+const loadLanguage = () => {
+  try {
+    return localStorage.getItem(STORAGE_LANGUAGE_KEY) === 'en' ? 'en' : 'fr';
+  } catch {
+    return 'fr';
+  }
+};
+
+const loadReminders = () => {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(STORAGE_REMINDERS_KEY) || '[]');
+    return new Set(Array.isArray(parsed) ? parsed.filter(id => typeof id === 'string') : []);
+  } catch {
+    return new Set();
   }
 };
 
 function App() {
   // Core state
   const [currentTab, setCurrentTab] = useState('home');
-  const [lang, setLang] = useState('fr');
+  const [lang, setLang] = useState(loadLanguage);
 
   // Participant profile (première connexion : nom, prénom, téléphone, pays)
   const [profile, setProfile] = useState(loadProfile);
@@ -65,11 +96,10 @@ function App() {
   // Contenu éditable (programme, séjour, Paris, audios, à propos, compte à rebours).
   // Repli sur defaultContent ; remplacé par le serveur si disponible.
   const [content, setContent] = useState(defaultContent);
+  const [contentStatus, setContentStatus] = useState(API_ENABLED ? 'loading' : 'ready');
 
   // Accès administrateur (organisateurs & pasteurs)
-  const [adminUnlocked, setAdminUnlocked] = useState(
-    () => localStorage.getItem(STORAGE_ADMIN_KEY) === '1'
-  );
+  const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminModalOpen, setAdminModalOpen] = useState(false);
   const [pendingAdminAction, setPendingAdminAction] = useState(null);
 
@@ -92,7 +122,7 @@ function App() {
 
   // Programme state
   const [selectedDay, setSelectedDay] = useState('d1');
-  const [reminders, setReminders] = useState(new Set());
+  const [reminders, setReminders] = useState(loadReminders);
   const [openSessionId, setOpenSessionId] = useState(null);
 
   // Question state
@@ -139,9 +169,19 @@ function App() {
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
 
   useEffect(() => {
-    const targetDate = new Date(content.countdownTargetISO);
+    document.documentElement.lang = lang;
+    try { localStorage.setItem(STORAGE_LANGUAGE_KEY, lang); } catch { /* stockage indisponible */ }
+  }, [lang]);
+
+  useEffect(() => {
+    try { localStorage.setItem(STORAGE_REMINDERS_KEY, JSON.stringify([...reminders])); } catch { /* stockage indisponible */ }
+  }, [reminders]);
+
+  useEffect(() => {
     const interval = setInterval(() => {
       const now = new Date();
+      const nextSession = upcomingSessions(content, 1)[0];
+      const targetDate = new Date(nextSession?.startISO || content.countdownTargetISO);
       const diff = targetDate - now;
       if (diff > 0) {
         setCountdown({
@@ -155,15 +195,31 @@ function App() {
       }
     }, 1000);
     return () => clearInterval(interval);
-  }, [content.countdownTargetISO]);
+  }, [content]);
 
   // Chargement du contenu éditable depuis le serveur (repli : defaultContent)
   useEffect(() => {
     if (!API_ENABLED) return;
     fetchContent()
-      .then((c) => { if (c && typeof c === 'object') setContent(c); })
-      .catch(() => { /* hors-ligne : on garde defaultContent */ });
+      .then((candidate) => {
+        setContent(assertValidContent(candidate));
+        setContentStatus('ready');
+      })
+      .catch(() => setContentStatus('error'));
   }, []);
+
+  // Un jeton révoqué/expiré ne doit pas laisser l'app dans un état local
+  // impossible à réparer. On revient à l'inscription avec un message clair.
+  useEffect(() => {
+    if (!API_ENABLED || !profile || !getParticipantToken()) return;
+    fetchMyProfile().catch((err) => {
+      if (err.status === 401) {
+        clearParticipantToken();
+        try { localStorage.removeItem(STORAGE_PROFILE_KEY); } catch { /* stockage indisponible */ }
+        setProfile(null);
+      }
+    });
+  }, [profile]);
 
   // Notifications diffusées par les organisateurs (remplacent les exemples si serveur dispo)
   useEffect(() => {
@@ -221,31 +277,46 @@ function App() {
   const openSession = (sessionId) => setOpenSessionId(sessionId);
   const closeSession = () => setOpenSessionId(null);
 
-  const toggleReminder = (sessionId) => {
+  const toggleReminder = async (sessionId) => {
     const newReminders = new Set(reminders);
     if (newReminders.has(sessionId)) {
       newReminders.delete(sessionId);
+      await cancelSessionReminder(sessionId);
       showToast(t('toast_reminder_removed'));
     } else {
+      const session = (content.sessions || []).find(item => item.id === sessionId);
+      if (!session) return;
+      const scheduled = await scheduleSessionReminder(session, lang);
+      if (!scheduled) {
+        showToast(t('toast_reminder_failed'));
+        return;
+      }
       newReminders.add(sessionId);
       showToast(t('toast_reminder_added'));
     }
     setReminders(newReminders);
   };
 
-  // Onboarding : enregistre le profil localement + sur le serveur (si disponible)
+  // Onboarding : en production connectée, le profil n'est validé localement
+  // qu'après confirmation du serveur. Cela évite un compte local sans jeton,
+  // impossible à réparer après une coupure réseau.
   const completeOnboarding = async (newProfile) => {
+    if (API_ENABLED) {
+      try {
+        await registerParticipant(newProfile);
+      } catch (err) {
+        return { ok: false, reason: err.status === 409 ? 'duplicate' : 'network' };
+      }
+    }
     try {
       localStorage.setItem(STORAGE_PROFILE_KEY, JSON.stringify(newProfile));
     } catch { /* stockage indisponible : le profil reste en mémoire */ }
     setProfile(newProfile);
     if (API_ENABLED) {
-      try {
-        await registerParticipant(newProfile);
-        // Le token existe maintenant : récupère immédiatement l'hébergement assigné
-        fetchMyHousing().then(setHousing).catch(() => {});
-      } catch { /* serveur indisponible : le profil reste local, synchro plus tard */ }
+      // Le jeton existe maintenant : récupère immédiatement l'hébergement assigné.
+      fetchMyHousing().then(setHousing).catch(() => {});
     }
+    return { ok: true };
   };
 
   // Accès admin : exécute l'action demandée, ou ouvre le modal de code
@@ -265,37 +336,24 @@ function App() {
 
   const unlockAdmin = () => {
     setAdminUnlocked(true);
-    try {
-      localStorage.setItem(STORAGE_ADMIN_KEY, '1');
-    } catch { /* stockage indisponible : déverrouillage en mémoire seulement */ }
     setAdminModalOpen(false);
     performAdminAction(pendingAdminAction);
     setPendingAdminAction(null);
     showToast(t('toast_admin_ok'));
   };
 
-  // Vérifie le code admin côté serveur ; repli local si serveur indisponible.
+  // Vérifie toujours le code admin côté serveur. Il n'existe volontairement
+  // aucun code de secours embarqué dans le binaire mobile.
   // onResult(true|false) est appelé de façon asynchrone.
   const handleAdminCode = (code, onResult) => {
     if (!API_ENABLED) {
-      const ok = code === ADMIN_CODE;
-      if (ok) unlockAdmin();
-      onResult(ok);
+      showToast(t('admin_server_required'));
+      onResult(false);
       return;
     }
     adminLogin(code)
       .then(() => { unlockAdmin(); onResult(true); })
-      .catch((err) => {
-        // 401 = mauvais code ; autre erreur = serveur injoignable → repli local
-        if (err.status === 401) {
-          onResult(false);
-        } else if (code === ADMIN_CODE) {
-          unlockAdmin();
-          onResult(true);
-        } else {
-          onResult(false);
-        }
-      });
+      .catch(() => onResult(false));
   };
 
   const guardedSetPastorMode = (val) => {
@@ -315,17 +373,21 @@ function App() {
   };
 
   // Question functions
-  const submitQuestion = () => {
+  const submitQuestion = async (consent) => {
     const text = questionDraft.trim();
-    if (!text) return;
+    if (!text || consent !== true) return false;
 
     if (API_ENABLED) {
-      setMyQuestion({ text, status: 'pending' });
-      setQuestionDraft('');
-      submitQuestionApi(text)
-        .then((q) => { setMyQuestion(q); showToast('Question soumise avec succès !'); })
-        .catch(() => showToast('Envoi en attente de connexion…'));
-      return;
+      try {
+        const q = await submitQuestionApi(text, true);
+        setMyQuestion(q);
+        setQuestionDraft('');
+        showToast(t('question_sent_success'));
+        return true;
+      } catch {
+        showToast(t('question_send_failed'));
+        return false;
+      }
     }
 
     // Mode local (sans serveur)
@@ -338,7 +400,8 @@ function App() {
       ...prev
     ]);
     setQuestionDraft('');
-    showToast('Question soumise avec succès !');
+    showToast(t('question_sent_success'));
+    return true;
   };
 
   const confirmAssign = () => {
@@ -381,7 +444,24 @@ function App() {
     if (!API_ENABLED) return;
     fetchAdminStats()
       .then((s) => setAdminStats(s))
-      .catch(() => { /* stats indisponibles : l'UI garde les valeurs d'exemple */ });
+      .catch((err) => {
+        setAdminStats(null);
+        if (err.status === 401) {
+          clearAdminToken();
+          setAdminUnlocked(false);
+        }
+      });
+  };
+
+  const handleAdminLogout = async () => {
+    try {
+      if (API_ENABLED) await adminLogout();
+    } catch { /* le jeton local est tout de même supprimé par adminLogout */ }
+    clearAdminToken();
+    setAdminUnlocked(false);
+    setPastorMode(false);
+    setAdminStats(null);
+    setPlusSubmenu(null);
   };
 
   // Hébergement assigné : au démarrage puis toutes les 60 s (si l'organisation
@@ -445,7 +525,7 @@ function App() {
     return audioRef.current;
   };
 
-  const toggleTrack = (trackId) => {
+  const toggleTrack = async (trackId) => {
     const track = (content.audios || []).find(tr => tr.id === trackId);
     const src = track && track.url ? mediaUrl(track.url) : '';
     if (!src) {
@@ -458,16 +538,26 @@ function App() {
         a.pause();
         setAudioPlaying(false);
       } else {
-        a.play().catch(() => {});
-        setAudioPlaying(true);
+        try {
+          await a.play();
+          setAudioPlaying(true);
+        } catch {
+          setAudioPlaying(false);
+          showToast(t('audio_playback_error'));
+        }
       }
     } else {
       a.src = src;
       a.currentTime = 0;
-      a.play().catch(() => {});
       setAudioCurrent(trackId);
-      setAudioPlaying(true);
       setAudioProgress(0);
+      try {
+        await a.play();
+        setAudioPlaying(true);
+      } catch {
+        setAudioPlaying(false);
+        showToast(t('audio_playback_error'));
+      }
     }
   };
 
@@ -476,6 +566,22 @@ function App() {
     setAudioCurrent(null);
     setAudioPlaying(false);
     setAudioProgress(0);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!window.confirm(t('account_delete_confirm'))) return;
+    try {
+      if (API_ENABLED) await deleteMyAccount();
+      clearParticipantToken();
+      localStorage.removeItem(STORAGE_PROFILE_KEY);
+      localStorage.removeItem(STORAGE_REMINDERS_KEY);
+      setReminders(new Set());
+      setProfile(null);
+      setHousing(null);
+      setMyQuestion(null);
+    } catch {
+      showToast(t('account_delete_failed'));
+    }
   };
 
   const tabIsHome = currentTab === 'home';
@@ -497,10 +603,22 @@ function App() {
     );
   }
 
+  if (API_ENABLED && contentStatus !== 'ready') {
+    return (
+      <main className="service-state" role="status" aria-live="polite">
+        <img src="/uploads/logo_lwmfd.png" alt="Life Word Mission France & Diaspora" />
+        <h1>{contentStatus === 'loading' ? t('content_loading') : t('content_unavailable')}</h1>
+        {contentStatus === 'error' && (
+          <button type="button" onClick={() => window.location.reload()}>{t('content_retry')}</button>
+        )}
+      </main>
+    );
+  }
+
   return (
     <div style={{
       position: 'relative',
-      height: '100vh',
+      height: '100dvh',
       display: 'flex',
       flexDirection: 'column',
       background: '#F7F5EF',
@@ -532,6 +650,7 @@ function App() {
           onLangFr={() => setLang('fr')}
           onLangEn={() => setLang('en')}
           onToggleNotif={onToggleNotif}
+          notifOpen={notifOpen}
           hasNotifBadge={hasNotifBadge}
           notifBadgeText={notifBadgeText}
           t={t}
@@ -611,10 +730,11 @@ function App() {
               audioCurrent={audioCurrent}
               audioPlaying={audioPlaying}
               toggleTrack={toggleTrack}
-              pastorQueue={pastorQueue}
               adminStats={adminStats}
               content={content}
               showToast={showToast}
+              onDeleteAccount={handleDeleteAccount}
+              onAdminLogout={handleAdminLogout}
             />
           )}
         </div>

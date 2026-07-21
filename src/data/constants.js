@@ -1,9 +1,7 @@
-// Code administrateur commun (organisateurs & pasteurs) — à changer avant publication
-export const ADMIN_CODE = "LWMFD2026";
-
 // Clés de stockage local
 export const STORAGE_PROFILE_KEY = "p26_profile";
-export const STORAGE_ADMIN_KEY = "p26_admin_unlocked";
+export const STORAGE_LANGUAGE_KEY = "p26_language";
+export const STORAGE_REMINDERS_KEY = "p26_reminders";
 
 // Pays de résidence proposés à l'inscription
 export const COUNTRIES = [

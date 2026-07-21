@@ -7,14 +7,15 @@ export default function Header({
   onLangFr,
   onLangEn,
   onToggleNotif,
+  notifOpen,
   hasNotifBadge,
   notifBadgeText,
   t,
   countdown,
   nextSession
 }) {
-  const nextTitle = nextSession ? (lang === 'fr' ? nextSession.tFr : nextSession.tEn) : "Cérémonie d'ouverture";
-  const nextLoc = nextSession ? (lang === 'fr' ? nextSession.locFr : nextSession.locEn) : "Amphithéâtre Novotel";
+  const nextTitle = nextSession ? (lang === 'fr' ? nextSession.tFr : nextSession.tEn) : t('home_no_upcoming');
+  const nextLoc = nextSession ? (lang === 'fr' ? nextSession.locFr : nextSession.locEn) : '';
   const langFrBg = lang === 'fr' ? '#fff' : 'transparent';
   const langFrFg = lang === 'fr' ? '#0E1B38' : 'rgba(255,255,255,0.7)';
   const langEnBg = lang === 'en' ? '#fff' : 'transparent';
@@ -66,7 +67,13 @@ export default function Header({
               borderRadius: '100px',
               padding: '3px'
             }}>
-              <div onClick={onLangFr} style={{
+              <button
+                type="button"
+                className="ui-button-reset"
+                onClick={onLangFr}
+                aria-pressed={lang === 'fr'}
+                aria-label="Français"
+                style={{
                 padding: '5px 10px',
                 borderRadius: '100px',
                 fontSize: '11px',
@@ -74,8 +81,14 @@ export default function Header({
                 cursor: 'pointer',
                 background: langFrBg,
                 color: langFrFg
-              }}>FR</div>
-              <div onClick={onLangEn} style={{
+              }}>FR</button>
+              <button
+                type="button"
+                className="ui-button-reset"
+                onClick={onLangEn}
+                aria-pressed={lang === 'en'}
+                aria-label="English"
+                style={{
                 padding: '5px 10px',
                 borderRadius: '100px',
                 fontSize: '11px',
@@ -83,10 +96,17 @@ export default function Header({
                 cursor: 'pointer',
                 background: langEnBg,
                 color: langEnFg
-              }}>EN</div>
+              }}>EN</button>
             </div>
 
-            <div onClick={onToggleNotif} style={{
+            <button
+              type="button"
+              className="ui-button-reset"
+              onClick={onToggleNotif}
+              aria-label={t('notif_center_title')}
+              aria-haspopup="dialog"
+              aria-expanded={notifOpen}
+              style={{
               position: 'relative',
               width: '34px',
               height: '34px',
@@ -102,7 +122,7 @@ export default function Header({
                 <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
               </svg>
               {hasNotifBadge && (
-                <div style={{
+                <span aria-hidden="true" style={{
                   position: 'absolute',
                   top: '-2px',
                   right: '-2px',
@@ -118,9 +138,9 @@ export default function Header({
                   justifyContent: 'center',
                   padding: '0 3px',
                   border: '2px solid #16305A'
-                }}>{notifBadgeText}</div>
+                }}>{notifBadgeText}</span>
               )}
-            </div>
+            </button>
           </div>
         </div>
 
@@ -288,11 +308,17 @@ export default function Header({
         minWidth: 0
       }}>
         {headerShowBack && (
-          <div onClick={onHeaderBack} style={{ cursor: 'pointer', flex: 'none' }}>
+          <button
+            type="button"
+            className="ui-button-reset"
+            onClick={onHeaderBack}
+            aria-label={lang === 'fr' ? 'Retour' : 'Back'}
+            style={{ cursor: 'pointer', flex: 'none' }}
+          >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 18l-6-6 6-6"></path>
             </svg>
-          </div>
+          </button>
         )}
         <div style={{
           fontFamily: "'Anton', sans-serif",
@@ -313,7 +339,13 @@ export default function Header({
           borderRadius: '100px',
           padding: '3px'
         }}>
-          <div onClick={onLangFr} style={{
+          <button
+            type="button"
+            className="ui-button-reset"
+            onClick={onLangFr}
+            aria-pressed={lang === 'fr'}
+            aria-label="Français"
+            style={{
             padding: '5px 10px',
             borderRadius: '100px',
             fontSize: '11px',
@@ -321,8 +353,14 @@ export default function Header({
             cursor: 'pointer',
             background: langFrBg,
             color: langFrFg
-          }}>FR</div>
-          <div onClick={onLangEn} style={{
+          }}>FR</button>
+          <button
+            type="button"
+            className="ui-button-reset"
+            onClick={onLangEn}
+            aria-pressed={lang === 'en'}
+            aria-label="English"
+            style={{
             padding: '5px 10px',
             borderRadius: '100px',
             fontSize: '11px',
@@ -330,10 +368,16 @@ export default function Header({
             cursor: 'pointer',
             background: langEnBg,
             color: langEnFg
-          }}>EN</div>
+          }}>EN</button>
         </div>
 
-        <div onClick={onToggleNotif} style={{
+        <button
+          type="button"
+          className="ui-button-reset"
+          onClick={onToggleNotif}
+          aria-label={t('notif_center_title')}
+          aria-haspopup="dialog"
+          style={{
           position: 'relative',
           width: '34px',
           height: '34px',
@@ -349,7 +393,7 @@ export default function Header({
             <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
           </svg>
           {hasNotifBadge && (
-            <div style={{
+            <span aria-hidden="true" style={{
               position: 'absolute',
               top: '-2px',
               right: '-2px',
@@ -365,9 +409,9 @@ export default function Header({
               justifyContent: 'center',
               padding: '0 3px',
               border: '2px solid #0E1B38'
-            }}>{notifBadgeText}</div>
+              }}>{notifBadgeText}</span>
           )}
-        </div>
+        </button>
       </div>
     </div>
   );

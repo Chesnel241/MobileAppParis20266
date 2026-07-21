@@ -1,13 +1,44 @@
+import { useEffect, useRef } from 'react';
+
 export default function NotificationCenter({ onClose, notifHistory, t }) {
+  const dialogRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    const previouslyFocused = document.activeElement;
+    dialogRef.current?.focus();
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') onCloseRef.current();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      previouslyFocused?.focus?.();
+    };
+  }, []);
+
   return (
     <>
-      <div onClick={onClose} style={{
+      <button
+        type="button"
+        className="ui-button-reset"
+        onClick={onClose}
+        aria-label={t('modal_close')}
+        style={{
         position: 'absolute',
         inset: 0,
         zIndex: 40,
+        width: '100%',
         background: 'rgba(0,0,0,0.01)'
-      }}></div>
-      <div style={{
+      }}></button>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="notification-dialog-title"
+        tabIndex={-1}
+        style={{
         position: 'absolute',
         top: '100px',
         right: '14px',
@@ -20,7 +51,7 @@ export default function NotificationCenter({ onClose, notifHistory, t }) {
         zIndex: 41,
         padding: '6px'
       }}>
-        <div style={{
+        <div id="notification-dialog-title" style={{
           padding: '10px 12px',
           fontWeight: 700,
           fontSize: '13px',
@@ -28,6 +59,11 @@ export default function NotificationCenter({ onClose, notifHistory, t }) {
         }}>
           {t('notif_center_title')}
         </div>
+        <button
+          type="button"
+          className="sr-only"
+          onClick={onClose}
+        >{t('modal_close')}</button>
         {notifHistory.length === 0 && (
           <div style={{
             padding: '10px 12px',

@@ -182,3 +182,81 @@
     border-right-color: var(--border);
   }
 }
+
+/* Neutralise uniquement le rendu natif des boutons utilisés comme surfaces
+   interactives. Les styles visuels restent portés par chaque composant. */
+.ui-button-reset {
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  text-align: inherit;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.ui-button-reset:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role='dialog']:focus-visible {
+  outline: 3px solid #ea4630;
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.service-state {
+  min-height: 100dvh;
+  max-width: 402px;
+  margin: 0 auto;
+  padding: calc(48px + env(safe-area-inset-top)) 24px calc(32px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  text-align: center;
+  color: #12172a;
+  background: #f7f5ef;
+}
+
+.service-state img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+}
+
+.service-state h1 {
+  max-width: 320px;
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.35;
+}
+
+.service-state button {
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 20px;
+  color: #fff;
+  background: #0e1b38;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}

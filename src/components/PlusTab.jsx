@@ -12,9 +12,10 @@ export default function PlusTab({
   audioCurrent,
   audioPlaying,
   toggleTrack,
-  pastorQueue,
   adminStats,
-  showToast
+  showToast,
+  onDeleteAccount,
+  onAdminLogout,
 }) {
   const LANDMARKS = content.paris.landmarks || [];
   const AUDIO_TRACKS = content.audios || [];
@@ -69,14 +70,19 @@ export default function PlusTab({
 
     return (
       <>
-        <div style={{
+        <div role="group" aria-label={t('plus_paris_title')} style={{
           display: 'flex',
           background: 'rgba(18,23,42,0.06)',
           borderRadius: '100px',
           padding: '4px',
           marginBottom: '18px'
         }}>
-          <div onClick={() => setParisSegVenues(false)} style={{
+          <button
+            type="button"
+            className="ui-button-reset"
+            onClick={() => setParisSegVenues(false)}
+            aria-pressed={!parisSegVenues}
+            style={{
             flex: 1,
             textAlign: 'center',
             padding: '10px 4px',
@@ -86,8 +92,13 @@ export default function PlusTab({
             cursor: 'pointer',
             background: sitesBtnBg,
             color: sitesBtnFg
-          }}>{t('paris_seg_sites')}</div>
-          <div onClick={() => setParisSegVenues(true)} style={{
+          }}>{t('paris_seg_sites')}</button>
+          <button
+            type="button"
+            className="ui-button-reset"
+            onClick={() => setParisSegVenues(true)}
+            aria-pressed={parisSegVenues}
+            style={{
             flex: 1,
             textAlign: 'center',
             padding: '10px 4px',
@@ -97,7 +108,7 @@ export default function PlusTab({
             cursor: 'pointer',
             background: venuesBtnBg,
             color: venuesBtnFg
-          }}>{t('paris_seg_venues')}</div>
+          }}>{t('paris_seg_venues')}</button>
         </div>
 
         {!parisSegVenues && (
@@ -225,7 +236,13 @@ export default function PlusTab({
               padding: '12px 0',
               borderBottom: '1px solid rgba(18,23,42,0.07)'
             }}>
-              <div onClick={() => toggleTrack(track.id)} style={{
+              <button
+                type="button"
+                className="ui-button-reset"
+                onClick={() => toggleTrack(track.id)}
+                aria-label={title}
+                aria-pressed={isPlayingThis}
+                style={{
                 width: '40px',
                 height: '40px',
                 borderRadius: '50%',
@@ -246,7 +263,7 @@ export default function PlusTab({
                     <polygon points="6 3 20 12 6 21 6 3"></polygon>
                   </svg>
                 )}
-              </div>
+              </button>
 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{
@@ -277,40 +294,37 @@ export default function PlusTab({
 
   // Organisateur submenu
   if (submenu === 'organisateur') {
-    const pendingCount = pastorQueue.filter(q => q.status === 'pending').length;
-    const assignedCount = pastorQueue.filter(q => q.status === 'assigned').length;
-
-    // Valeurs réelles si le serveur est disponible, sinon valeurs d'exemple
     const s = adminStats;
-    const kpiInscrits = s ? String(s.registered) : '342';
-    const kpiCheckins = s ? String(s.checkins) : '298';
-    const kpiTaux = s ? `${s.attendanceRate}%` : '87%';
-    const kpiRecues = s ? String(s.received) : String(pendingCount + assignedCount);
-    const kpiTraitees = s ? String(s.handled) : String(assignedCount);
-    const kpiActifs = s ? String(s.active) : '156';
+    if (!s) {
+      return (
+        <>
+          <div role="status" style={{
+            background: '#fff',
+            border: '1px solid rgba(18,23,42,0.08)',
+            borderRadius: '16px',
+            padding: '18px',
+            color: 'rgba(18,23,42,0.65)',
+            fontSize: '13px',
+            lineHeight: 1.5,
+          }}>{t('organisateur_data_unavailable')}</div>
+          <AdminLogoutButton t={t} onClick={onAdminLogout} />
+        </>
+      );
+    }
 
-    const countryBars = s && s.byCountry?.length
-      ? s.byCountry.map((c, i) => (
-          <CountryBar key={c.country} name={c.country} pct={String(c.pct)} isLast={i === s.byCountry.length - 1} />
-        ))
-      : [
-          <CountryBar key="fr" name="France" pct="45" />,
-          <CountryBar key="cg" name="Congo-Brazzaville" pct="22" />,
-          <CountryBar key="cd" name="RDC" pct="18" />,
-          <CountryBar key="cm" name="Cameroun" pct="8" />,
-          <CountryBar key="ci" name="Côte d'Ivoire" pct="5" />,
-          <CountryBar key="other" name="Autres" pct="2" isLast />,
-        ];
+    const countryBars = s.byCountry?.map((c, i) => (
+      <CountryBar key={c.country} name={c.country} pct={String(c.pct)} isLast={i === s.byCountry.length - 1} />
+    ));
 
     return (
       <>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-          <KPICard value={kpiInscrits} label={t('organisateur_kpi_inscrits')} color="#0E1B38" />
-          <KPICard value={kpiCheckins} label={t('organisateur_kpi_checkins')} color="#0E1B38" />
-          <KPICard value={kpiTaux} label={t('organisateur_kpi_taux')} color="#2FBF8F" />
-          <KPICard value={kpiRecues} label={t('organisateur_kpi_recues')} color="#EA4630" />
-          <KPICard value={kpiTraitees} label={t('organisateur_kpi_traitees')} color="#0E1B38" />
-          <KPICard value={kpiActifs} label={t('organisateur_kpi_actifs')} color="#0E1B38" />
+          <KPICard value={String(s.registered)} label={t('organisateur_kpi_inscrits')} color="#0E1B38" />
+          <KPICard value={String(s.checkins)} label={t('organisateur_kpi_checkins')} color="#0E1B38" />
+          <KPICard value={`${s.attendanceRate}%`} label={t('organisateur_kpi_taux')} color="#2FBF8F" />
+          <KPICard value={String(s.received)} label={t('organisateur_kpi_recues')} color="#EA4630" />
+          <KPICard value={String(s.handled)} label={t('organisateur_kpi_traitees')} color="#0E1B38" />
+          <KPICard value={String(s.active)} label={t('organisateur_kpi_actifs')} color="#0E1B38" />
         </div>
 
         <div style={{
@@ -328,7 +342,7 @@ export default function PlusTab({
           padding: '16px',
           border: '1px solid rgba(18,23,42,0.06)'
         }}>
-          {countryBars}
+          {countryBars?.length ? countryBars : <div>{t('organisateur_no_country_data')}</div>}
         </div>
 
         <div style={{
@@ -338,6 +352,7 @@ export default function PlusTab({
           lineHeight: '1.5',
           textAlign: 'center'
         }}>{t('organisateur_note')}</div>
+        <AdminLogoutButton t={t} onClick={onAdminLogout} />
       </>
     );
   }
@@ -479,6 +494,19 @@ export default function PlusTab({
           color: 'rgba(18,23,42,0.55)',
           textDecoration: 'underline'
         }}>{t('about_privacy_link')}</a>
+        <button type="button" className="ui-button-reset" onClick={onDeleteAccount} style={{
+          display: 'block',
+          width: '100%',
+          marginTop: '18px',
+          padding: '13px 16px',
+          border: '1px solid rgba(234,70,48,0.35)',
+          borderRadius: '100px',
+          color: '#B83224',
+          background: '#fff',
+          fontWeight: 700,
+          textAlign: 'center',
+          cursor: 'pointer',
+        }}>{t('account_delete')}</button>
       </>
     );
   }
@@ -486,9 +514,27 @@ export default function PlusTab({
   return null;
 }
 
+function AdminLogoutButton({ t, onClick }) {
+  return (
+    <button type="button" className="ui-button-reset" onClick={onClick} style={{
+      display: 'block',
+      width: '100%',
+      marginTop: '18px',
+      padding: '12px 16px',
+      border: '1px solid rgba(18,23,42,0.18)',
+      borderRadius: '100px',
+      color: '#0E1B38',
+      background: '#fff',
+      fontWeight: 700,
+      textAlign: 'center',
+      cursor: 'pointer',
+    }}>{t('admin_logout')}</button>
+  );
+}
+
 function MenuCard({ onClick, icon, title, description }) {
   return (
-    <div onClick={onClick} style={{
+    <button type="button" className="ui-button-reset" onClick={onClick} style={{
       display: 'flex',
       alignItems: 'center',
       gap: '14px',
@@ -497,9 +543,11 @@ function MenuCard({ onClick, icon, title, description }) {
       padding: '16px',
       marginBottom: '12px',
       border: '1px solid rgba(18,23,42,0.06)',
-      cursor: 'pointer'
+      cursor: 'pointer',
+      width: '100%',
+      textAlign: 'left'
     }}>
-      <div style={{
+      <span aria-hidden="true" style={{
         width: '44px',
         height: '44px',
         borderRadius: '12px',
@@ -510,23 +558,25 @@ function MenuCard({ onClick, icon, title, description }) {
         flex: 'none'
       }}>
         {icon}
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
+      </span>
+      <span style={{ display: 'block', flex: 1, minWidth: 0 }}>
+        <span style={{
+          display: 'block',
           fontSize: '14.5px',
           fontWeight: 700,
           color: '#12172A'
-        }}>{title}</div>
-        <div style={{
+        }}>{title}</span>
+        <span style={{
+          display: 'block',
           fontSize: '12px',
           color: 'rgba(18,23,42,0.55)',
           marginTop: '2px'
-        }}>{description}</div>
-      </div>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(18,23,42,0.3)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        }}>{description}</span>
+      </span>
+      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(18,23,42,0.3)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M9 6l6 6-6 6"></path>
       </svg>
-    </div>
+    </button>
   );
 }
 

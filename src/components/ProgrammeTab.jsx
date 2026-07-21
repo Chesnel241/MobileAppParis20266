@@ -25,9 +25,12 @@ export default function ProgrammeTab({ t, lang, content, selectedDay, setSelecte
           const label = lang === 'fr' ? day.dFr : day.dEn;
 
           return (
-            <div
+            <button
+              type="button"
+              className="ui-button-reset"
               key={day.id}
               onClick={() => setSelectedDay(day.id)}
+              aria-pressed={isSelected}
               style={{
                 flex: 'none',
                 padding: '9px 14px',
@@ -42,7 +45,7 @@ export default function ProgrammeTab({ t, lang, content, selectedDay, setSelecte
               }}
             >
               {label}
-            </div>
+            </button>
           );
         })}
       </div>
@@ -72,39 +75,47 @@ export default function ProgrammeTab({ t, lang, content, selectedDay, setSelecte
           const timeRange = sessionTimeRange(session);
 
           return (
-            <div
+            <button
+              type="button"
+              className="ui-button-reset"
               key={session.id}
               onClick={() => openSession(session.id)}
+              aria-label={`${title}, ${timeRange}`}
               style={{
                 display: 'flex',
                 gap: '12px',
                 padding: '14px 0',
                 borderBottom: idx < daySessions.length - 1 ? '1px solid rgba(18,23,42,0.07)' : 'none',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                width: '100%',
+                textAlign: 'left'
               }}
             >
-              <div style={{ width: '60px', flex: 'none' }}>
-                <div style={{
+              <span style={{ display: 'block', width: '60px', flex: 'none' }}>
+                <span style={{
+                  display: 'block',
                   fontSize: '12px',
                   fontWeight: 700,
                   color: '#12172A'
-                }}>{timeRange.split(' - ')[0]}</div>
-              </div>
+                }}>{timeRange.split(' - ')[0]}</span>
+              </span>
 
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
+              <span style={{ display: 'block', flex: 1, minWidth: 0 }}>
+                <span style={{
+                  display: 'block',
                   fontSize: '14.5px',
                   fontWeight: 600,
                   color: '#12172A',
                   lineHeight: '1.3'
-                }}>{title}</div>
-                <div style={{
+                }}>{title}</span>
+                <span style={{
+                  display: 'block',
                   fontSize: '12px',
                   color: 'rgba(18,23,42,0.55)',
                   marginTop: '3px'
-                }}>{location}</div>
-              </div>
-            </div>
+                }}>{location}</span>
+              </span>
+            </button>
           );
         })}
 

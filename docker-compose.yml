@@ -10,7 +10,7 @@ services:
       PORT: 8080
       DB_PATH: /data/paris2026.db
       UPLOADS_DIR: /data/uploads
-      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:?Définissez CORS_ORIGINS dans .env}
     volumes:
       - api_data:/data
     expose:

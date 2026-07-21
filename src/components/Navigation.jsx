@@ -13,30 +13,35 @@ export default function Navigation({ currentTab, goHome, goProgramme, goSejour, 
     }}>
       <NavItem
         onClick={goHome}
+        active={currentTab === 'home'}
         color={tabColor('home')}
         icon={<HomeIcon />}
         label={t('nav_home')}
       />
       <NavItem
         onClick={goProgramme}
+        active={currentTab === 'programme'}
         color={tabColor('programme')}
         icon={<CalendarIcon />}
         label={t('nav_programme')}
       />
       <NavItem
         onClick={goSejour}
+        active={currentTab === 'sejour'}
         color={tabColor('sejour')}
         icon={<HotelIcon />}
         label={t('nav_sejour')}
       />
       <NavItem
         onClick={goQuestion}
+        active={currentTab === 'question'}
         color={tabColor('question')}
         icon={<QuestionIcon />}
         label={t('nav_question')}
       />
       <NavItem
         onClick={goPlus}
+        active={currentTab === 'plus'}
         color={tabColor('plus')}
         icon={<GridIcon />}
         label={t('nav_plus')}
@@ -45,9 +50,15 @@ export default function Navigation({ currentTab, goHome, goProgramme, goSejour, 
   );
 }
 
-function NavItem({ onClick, color, icon, label }) {
+function NavItem({ onClick, active, color, icon, label }) {
   return (
-    <div onClick={onClick} style={{
+    <button
+      type="button"
+      className="ui-button-reset"
+      onClick={onClick}
+      aria-current={active ? 'page' : undefined}
+      aria-label={label}
+      style={{
       flex: 1,
       display: 'flex',
       flexDirection: 'column',
@@ -57,8 +68,8 @@ function NavItem({ onClick, color, icon, label }) {
       color
     }}>
       {icon}
-      <div style={{ fontSize: '9.5px', fontWeight: 700 }}>{label}</div>
-    </div>
+      <span style={{ fontSize: '9.5px', fontWeight: 700 }}>{label}</span>
+    </button>
   );
 }
 

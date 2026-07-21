@@ -3,7 +3,7 @@
 // Doit rester aligné avec src/data/defaultContent.js côté application.
 
 export const defaultContent = {
-  countdownTargetISO: "2026-07-24T16:00",
+  countdownTargetISO: "2026-07-24T16:00+02:00",
 
   days: [
     { id: "d1", dFr: "Ven 24 Juil", dEn: "Fri Jul 24", fullFr: "Vendredi 24 juillet", fullEn: "Friday, July 24", phase: "convention" },
@@ -17,22 +17,22 @@ export const defaultContent = {
   ],
 
   sessions: [
-    { id: "s1", dayId: "d1", startISO: "2026-07-24T16:00", endISO: "2026-07-24T17:30", tFr: "Cérémonie d'ouverture", tEn: "Opening ceremony", spFr: "Orateur principal", spEn: "Main speaker", locFr: "Amphithéâtre Novotel, Charenton-le-Pont", locEn: "Novotel Amphitheatre, Charenton-le-Pont", tag: "ceremonie" },
-    { id: "s2", dayId: "d1", startISO: "2026-07-24T17:30", endISO: "2026-07-24T18:15", tFr: "Louange & adoration", tEn: "Worship & praise", spFr: "Équipe de louange LWMF&D", spEn: "LWMF&D worship team", locFr: "Amphithéâtre Novotel, Charenton-le-Pont", locEn: "Novotel Amphitheatre, Charenton-le-Pont", tag: "louange" },
-    { id: "s3", dayId: "d1", startISO: "2026-07-24T18:15", endISO: "2026-07-24T19:45", tFr: "Message d'ouverture : Né mort, mourir vivant", tEn: "Opening message: Dead in Christ, Alive Forever", spFr: "Orateur principal", spEn: "Main speaker", locFr: "Amphithéâtre Novotel, Charenton-le-Pont", locEn: "Novotel Amphitheatre, Charenton-le-Pont", tag: "enseignement" },
-    { id: "s4", dayId: "d1", startISO: "2026-07-24T19:45", endISO: "2026-07-24T21:00", tFr: "Accueil & fraternisation", tEn: "Welcome reception", spFr: "", spEn: "", locFr: "Amphithéâtre Novotel, Charenton-le-Pont", locEn: "Novotel Amphitheatre, Charenton-le-Pont", tag: "accueil" },
-    { id: "s5", dayId: "d2", startISO: "2026-07-25T09:00", endISO: "2026-07-25T10:00", tFr: "Temps de prière matinale", tEn: "Morning prayer time", spFr: "", spEn: "", locFr: "Amphithéâtre Novotel, Charenton-le-Pont", locEn: "Novotel Amphitheatre, Charenton-le-Pont", tag: "priere" },
-    { id: "s6", dayId: "d2", startISO: "2026-07-25T10:00", endISO: "2026-07-25T12:00", tFr: "Enseignement principal", tEn: "Main teaching session", spFr: "Orateur principal", spEn: "Main speaker", locFr: "Amphithéâtre Novotel, Charenton-le-Pont", locEn: "Novotel Amphitheatre, Charenton-le-Pont", tag: "enseignement" },
-    { id: "s7", dayId: "d2", startISO: "2026-07-25T12:00", endISO: "2026-07-25T13:30", tFr: "Pause déjeuner", tEn: "Lunch break", spFr: "", spEn: "", locFr: "Amphithéâtre Novotel, Charenton-le-Pont", locEn: "Novotel Amphitheatre, Charenton-le-Pont", tag: "pause" },
-    { id: "s8", dayId: "d2", startISO: "2026-07-25T13:30", endISO: "2026-07-25T15:30", tFr: "Ateliers parallèles", tEn: "Parallel workshops", spFr: "", spEn: "", locFr: "Amphithéâtre Novotel, Charenton-le-Pont", locEn: "Novotel Amphitheatre, Charenton-le-Pont", tag: "atelier" },
-    { id: "s9", dayId: "d2", startISO: "2026-07-25T15:30", endISO: "2026-07-25T17:00", tFr: "Session de louange", tEn: "Worship session", spFr: "Équipe de louange LWMF&D", spEn: "LWMF&D worship team", locFr: "Amphithéâtre Novotel, Charenton-le-Pont", locEn: "Novotel Amphitheatre, Charenton-le-Pont", tag: "louange" },
-    { id: "s10", dayId: "d3", startISO: "2026-07-26T10:00", endISO: "2026-07-26T12:00", tFr: "Culte dominical", tEn: "Sunday service", spFr: "Orateur principal", spEn: "Main speaker", locFr: "Amphithéâtre Novotel, Charenton-le-Pont", locEn: "Novotel Amphitheatre, Charenton-le-Pont", tag: "culte" },
+    { id: "s1", dayId: "d1", startISO: "2026-07-24T16:00+02:00", endISO: "2026-07-24T17:30+02:00", tFr: "Cérémonie d'ouverture", tEn: "Opening ceremony", spFr: "Orateur principal", spEn: "Main speaker", locFr: "Amphithéâtre Novotel, Charenton-le-Pont", locEn: "Novotel Amphitheatre, Charenton-le-Pont", tag: "ceremonie" },
+    { id: "s2", dayId: "d1", startISO: "2026-07-24T17:30+02:00", endISO: "2026-07-24T18:15+02:00", tFr: "Louange & adoration", tEn: "Worship & praise", spFr: "Équipe de louange LWMF&D", spEn: "LWMF&D worship team", locFr: "Amphithéâtre Novotel, Charenton-le-Pont", locEn: "Novotel Amphitheatre, Charenton-le-Pont", tag: "louange" },
+    { id: "s3", dayId: "d1", startISO: "2026-07-24T18:15+02:00", endISO: "2026-07-24T19:45+02:00", tFr: "Message d'ouverture : Né mort, mourir vivant", tEn: "Opening message: Dead in Christ, Alive Forever", spFr: "Orateur principal", spEn: "Main speaker", locFr: "Amphithéâtre Novotel, Charenton-le-Pont", locEn: "Novotel Amphitheatre, Charenton-le-Pont", tag: "enseignement" },
+    { id: "s4", dayId: "d1", startISO: "2026-07-24T19:45+02:00", endISO: "2026-07-24T21:00+02:00", tFr: "Accueil & fraternisation", tEn: "Welcome reception", spFr: "", spEn: "", locFr: "Amphithéâtre Novotel, Charenton-le-Pont", locEn: "Novotel Amphitheatre, Charenton-le-Pont", tag: "accueil" },
+    { id: "s5", dayId: "d2", startISO: "2026-07-25T09:00+02:00", endISO: "2026-07-25T10:00+02:00", tFr: "Temps de prière matinale", tEn: "Morning prayer time", spFr: "", spEn: "", locFr: "Amphithéâtre Novotel, Charenton-le-Pont", locEn: "Novotel Amphitheatre, Charenton-le-Pont", tag: "priere" },
+    { id: "s6", dayId: "d2", startISO: "2026-07-25T10:00+02:00", endISO: "2026-07-25T12:00+02:00", tFr: "Enseignement principal", tEn: "Main teaching session", spFr: "Orateur principal", spEn: "Main speaker", locFr: "Amphithéâtre Novotel, Charenton-le-Pont", locEn: "Novotel Amphitheatre, Charenton-le-Pont", tag: "enseignement" },
+    { id: "s7", dayId: "d2", startISO: "2026-07-25T12:00+02:00", endISO: "2026-07-25T13:30+02:00", tFr: "Pause déjeuner", tEn: "Lunch break", spFr: "", spEn: "", locFr: "Amphithéâtre Novotel, Charenton-le-Pont", locEn: "Novotel Amphitheatre, Charenton-le-Pont", tag: "pause" },
+    { id: "s8", dayId: "d2", startISO: "2026-07-25T13:30+02:00", endISO: "2026-07-25T15:30+02:00", tFr: "Ateliers parallèles", tEn: "Parallel workshops", spFr: "", spEn: "", locFr: "Amphithéâtre Novotel, Charenton-le-Pont", locEn: "Novotel Amphitheatre, Charenton-le-Pont", tag: "atelier" },
+    { id: "s9", dayId: "d2", startISO: "2026-07-25T15:30+02:00", endISO: "2026-07-25T17:00+02:00", tFr: "Session de louange", tEn: "Worship session", spFr: "Équipe de louange LWMF&D", spEn: "LWMF&D worship team", locFr: "Amphithéâtre Novotel, Charenton-le-Pont", locEn: "Novotel Amphitheatre, Charenton-le-Pont", tag: "louange" },
+    { id: "s10", dayId: "d3", startISO: "2026-07-26T10:00+02:00", endISO: "2026-07-26T12:00+02:00", tFr: "Culte dominical", tEn: "Sunday service", spFr: "Orateur principal", spEn: "Main speaker", locFr: "Amphithéâtre Novotel, Charenton-le-Pont", locEn: "Novotel Amphitheatre, Charenton-le-Pont", tag: "culte" },
   ],
 
   sejour: {
-    hotelName: "Novotel Paris Est",
+    hotelName: "Novotel Paris Charenton le Pont",
     hotelPhotoUrl: "",
-    hotelMapQuery: "Novotel+Paris+Est+Charenton",
+    hotelMapQuery: "Novotel+Paris+Charenton+le+Pont",
     room: "Double Standard",
     checkin: "24 juillet, 14h00",
     checkout: "31 juillet, 11h00",
@@ -40,19 +40,19 @@ export const defaultContent = {
       wifi: { fr: "LWMFD-Convention / mdp: paris2026", en: "LWMFD-Convention / pwd: paris2026" },
       breakfast: { fr: "7h00 - 10h00, Restaurant de l'hôtel", en: "7:00 AM - 10:00 AM, Hotel restaurant" },
       shuttle: { fr: "Disponible vers Créteil, voir planning", en: "Available to Créteil, see schedule" },
-      reception: { fr: "+33 1 23 45 67 89", en: "+33 1 23 45 67 89" },
+      reception: { fr: "+33 1 46 76 60 60", en: "+33 1 46 76 60 60" },
     },
     venues: {
-      novotel: { nameFr: "Novotel Paris Est", nameEn: "Novotel Paris Est", addressFr: "1 Avenue de la République, 94220 Charenton-le-Pont", addressEn: "1 Avenue de la République, 94220 Charenton-le-Pont", mapQuery: "Novotel+Paris+Est+Charenton" },
+      novotel: { nameFr: "Novotel Paris Charenton le Pont", nameEn: "Novotel Paris Charenton le Pont", addressFr: "3-5 place des Marseillais, 94227 Charenton-le-Pont", addressEn: "3-5 place des Marseillais, 94227 Charenton-le-Pont", mapQuery: "Novotel+Paris+Charenton+le+Pont" },
       creteil: { nameFr: "Centre de formation - Créteil", nameEn: "Training center - Créteil", addressFr: "Créteil, Île-de-France", addressEn: "Créteil, Greater Paris", mapQuery: "Creteil+France" },
     },
   },
 
   paris: {
     transport: {
-      line1: { fr: "🚇 Métro - Lignes 1, 8 à proximité", en: "🚇 Metro - Lines 1, 8 nearby" },
-      line2: { fr: "🚌 Bus - Lignes 24, 111", en: "🚌 Bus - Lines 24, 111" },
-      line3: { fr: "🚊 RER A - Station Liberté", en: "🚊 RER A - Liberté station" },
+      line1: { fr: "🚇 Métro ligne 8 - station Liberté", en: "🚇 Metro line 8 - Liberté station" },
+      line2: { fr: "🗺️ Vérifiez votre itinéraire avant le départ", en: "🗺️ Check your route before departure" },
+      line3: { fr: "♿ Consultez Île-de-France Mobilités pour l'accessibilité", en: "♿ Check Île-de-France Mobilités for accessibility" },
     },
     landmarks: [
       { id: "l1", nameFr: "Tour Eiffel", nameEn: "Eiffel Tower", descFr: "Monument emblématique de Paris", descEn: "Iconic Paris monument", mapQuery: "Tour+Eiffel+Paris" },

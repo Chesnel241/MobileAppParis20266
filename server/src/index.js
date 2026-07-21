@@ -7,22 +7,32 @@ import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, extname } from 'node:path';
 import { mkdirSync, unlinkSync } from 'node:fs';
+import config from './config.js';
 import db from './db.js';
 import { defaultContent, CONTENT_SECTIONS } from './defaults.js';
+import {
+  InputValidationError,
+  participantIdentityKey,
+  validateAdminLoginInput,
+  validateContentSection,
+  validateHousingImportInput,
+  validateHousingLinkInput,
+  validateHousingUpdateInput,
+  validateNotificationInput,
+  validateParticipantInput,
+  validateQuestionAssignmentInput,
+  validateQuestionInput,
+} from './validation.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const PORT = process.env.PORT || 8080;
-const ADMIN_CODE = process.env.ADMIN_CODE || 'LWMFD2026';
-const ADMIN_SESSION_HOURS = Number(process.env.ADMIN_SESSION_HOURS || 24);
-const UPLOADS_DIR = process.env.UPLOADS_DIR || './data/uploads';
-// Origines autorisées (CORS). Vide = toutes (l'API est protégée par jetons Bearer, pas de cookies).
-const CORS_ORIGINS = (process.env.CORS_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+const PORT = config.port;
+const ADMIN_CODE = config.adminCode;
+const ADMIN_SESSION_HOURS = config.adminSessionHours;
+const UPLOADS_DIR = config.uploadsDir;
+// En production, la configuration refuse de démarrer si cette liste est vide.
+const CORS_ORIGINS = config.corsOrigins;
 mkdirSync(UPLOADS_DIR, { recursive: true });
-
-if (ADMIN_CODE === 'LWMFD2026') {
-  console.warn('[ATTENTION] ADMIN_CODE utilise la valeur par défaut. Définissez ADMIN_CODE en production.');
-}
 
 // Extensions autorisées par type de média
 const IMAGE_EXT = ['.jpg', '.jpeg', '.png', '.webp'];
@@ -77,13 +87,32 @@ app.use(cors(CORS_ORIGINS.length ? { origin: CORS_ORIGINS } : {}));
 // En-têtes de sécurité (équivalent minimal de helmet, sans dépendance)
 app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
+  res.setHeader('Content-Security-Policy', [
+    "default-src 'self'",
+    "base-uri 'none'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+    "img-src 'self' data: blob:",
+    "media-src 'self'",
+    "connect-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "script-src 'self' 'unsafe-inline'",
+  ].join('; '));
   next();
 });
 
-app.use(express.json({ limit: '64kb' }));
+app.use('/api', (_req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
+
+// `strict: false` est nécessaire car countdownTargetISO est une chaîne JSON.
+// Le gestionnaire d'erreurs plus bas transforme les JSON malformés en 400.
+app.use(express.json({ limit: '64kb', strict: false }));
 
 const now = () => new Date().toISOString();
 const token = () => randomBytes(24).toString('hex');
@@ -109,7 +138,8 @@ function safeEqual(a, b) {
 // ---- Middlewares d'authentification ----
 function bearer(req) {
   const h = req.headers.authorization || '';
-  return h.startsWith('Bearer ') ? h.slice(7) : null;
+  const value = h.startsWith('Bearer ') ? h.slice(7) : null;
+  return value && /^[0-9a-f]{48}$/.test(value) ? value : null;
 }
 
 function requireParticipant(req, res, next) {
@@ -125,8 +155,10 @@ function requireAdmin(req, res, next) {
   const t = bearer(req);
   const s = t && db.prepare('SELECT * FROM admin_sessions WHERE token = ?').get(t);
   if (!s || new Date(s.expires_at) < new Date()) {
+    if (s) db.prepare('DELETE FROM admin_sessions WHERE token = ?').run(t);
     return res.status(401).json({ error: 'admin_unauthorized' });
   }
+  req.adminToken = t;
   next();
 }
 
@@ -162,12 +194,10 @@ app.put('/api/admin/content/:section', requireAdmin, (req, res) => {
   if (!CONTENT_SECTIONS.includes(section)) {
     return res.status(400).json({ error: 'unknown_section' });
   }
-  if (req.body === undefined || req.body === null) {
-    return res.status(400).json({ error: 'missing_body' });
-  }
+  const content = validateContentSection(section, req.body);
   db.prepare(`INSERT INTO content (section, data, updated_at) VALUES (?, ?, ?)
               ON CONFLICT(section) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`)
-    .run(section, JSON.stringify(req.body), now());
+    .run(section, JSON.stringify(content), now());
   res.json({ ok: true, section });
 });
 
@@ -178,72 +208,26 @@ app.get('/api/notifications', (_req, res) => {
 });
 
 app.post('/api/admin/notifications', requireAdmin, (req, res) => {
-  const { textFr, textEn } = req.body || {};
-  const fr = (textFr || '').trim();
-  const en = (textEn || textFr || '').trim();
-  if (!fr) return res.status(400).json({ error: 'empty_text' });
+  const { textFr: fr, textEn: en } = validateNotificationInput(req.body);
   const id = randomUUID();
   db.prepare('INSERT INTO notifications (id, text_fr, text_en, created_at) VALUES (?, ?, ?, ?)')
     .run(id, fr, en, now());
   res.status(201).json({ id, fr, en });
 });
 
-// ---- Liaison automatique participant ↔ logement ----
-// Un participant est reconnu par son téléphone (9 derniers chiffres) ou, à défaut,
-// par son couple prénom+nom normalisé (minuscules, sans accents).
-const normPhone = (p) => String(p || '').replace(/\D/g, '').slice(-9);
-const normName = (s) => String(s || '')
-  .toLowerCase()
-  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  .replace(/\s+/g, ' ')
-  .trim();
-
-// Tente de lier un participant à une ligne logement non liée. Retourne l'id logement lié ou null.
-function autoLinkParticipant(participant) {
-  const rows = db.prepare('SELECT * FROM housing WHERE participant_id IS NULL').all();
-  const pPhone = normPhone(participant.phone);
-  const pName = normName(participant.first_name) + '|' + normName(participant.last_name);
-  const byPhone = pPhone ? rows.filter(h => normPhone(h.phone) === pPhone) : [];
-  const byName = rows.filter(h => (normName(h.first_name) + '|' + normName(h.last_name)) === pName);
-  const match = byPhone.length === 1 ? byPhone[0] : (byName.length === 1 ? byName[0] : null);
-  if (!match) return null;
-  db.prepare('UPDATE housing SET participant_id = ?, updated_at = ? WHERE id = ?')
-    .run(participant.id, now(), match.id);
-  return match.id;
-}
-
-// Tente de lier une ligne logement non liée à un participant existant.
-function autoLinkHousingRow(row) {
-  const hPhone = normPhone(row.phone);
-  const hName = normName(row.first_name) + '|' + normName(row.last_name);
-  const linked = new Set(
-    db.prepare('SELECT participant_id FROM housing WHERE participant_id IS NOT NULL').all()
-      .map(r => r.participant_id)
-  );
-  const participants = db.prepare('SELECT * FROM participants').all().filter(p => !linked.has(p.id));
-  const byPhone = hPhone ? participants.filter(p => normPhone(p.phone) === hPhone) : [];
-  const byName = participants.filter(p => (normName(p.first_name) + '|' + normName(p.last_name)) === hName);
-  const match = byPhone.length === 1 ? byPhone[0] : (byName.length === 1 ? byName[0] : null);
-  if (!match) return false;
-  db.prepare('UPDATE housing SET participant_id = ?, updated_at = ? WHERE id = ?')
-    .run(match.id, now(), row.id);
-  return true;
-}
-
 // ---- Inscription participant (première connexion, sans mot de passe) ----
 app.post('/api/participants', registerLimiter, (req, res) => {
-  const { firstName, lastName, phone, country } = req.body || {};
-  if (![firstName, lastName, phone, country].every(v => typeof v === 'string' && v.trim())) {
-    return res.status(400).json({ error: 'missing_fields' });
-  }
+  const participant = validateParticipantInput(req.body);
+  const identityKey = participantIdentityKey(participant);
+  const duplicate = db.prepare('SELECT first_name, last_name, phone FROM participants').all()
+    .some(existing => participantIdentityKey(existing) === identityKey);
+  if (duplicate) return res.status(409).json({ error: 'participant_already_exists' });
+
   const id = randomUUID();
   const t = token();
   db.prepare(`INSERT INTO participants (id, token, first_name, last_name, phone, country, created_at)
               VALUES (?, ?, ?, ?, ?, ?, ?)`)
-    .run(id, t, firstName.trim(), lastName.trim(), phone.trim(), country.trim(), now());
-  db.prepare('INSERT OR IGNORE INTO checkins (participant_id, created_at) VALUES (?, ?)').run(id, now());
-  // Liaison automatique avec la liste des personnes prises en charge (logements)
-  autoLinkParticipant({ id, first_name: firstName, last_name: lastName, phone });
+    .run(id, t, participant.firstName, participant.lastName, participant.phone, participant.country, now());
   res.status(201).json({ id, token: t });
 });
 
@@ -263,16 +247,23 @@ app.get('/api/participants/me', requireParticipant, (req, res) => {
   });
 });
 
+// Suppression complète du compte : les FK suppriment questions/check-in/photos et
+// délient le logement. Les fichiers de la pellicule sont ensuite retirés du volume.
+app.delete('/api/participants/me', requireParticipant, (req, res) => {
+  const photos = db.prepare('SELECT file FROM photos WHERE participant_id = ?').all(req.participant.id);
+  db.prepare('DELETE FROM participants WHERE id = ?').run(req.participant.id);
+  for (const photo of photos) dropFile({ filename: photo.file });
+  res.json({ ok: true });
+});
+
 // ---- Questions (côté participant) ----
 app.post('/api/questions', writeLimiter, requireParticipant, (req, res) => {
-  const { text } = req.body || {};
-  if (typeof text !== 'string' || !text.trim()) {
-    return res.status(400).json({ error: 'empty_text' });
-  }
+  const { text } = validateQuestionInput(req.body);
   const id = randomUUID();
-  db.prepare(`INSERT INTO questions (id, participant_id, text, status, created_at, updated_at)
-              VALUES (?, ?, ?, 'pending', ?, ?)`)
-    .run(id, req.participant.id, text.trim(), now(), now());
+  const createdAt = now();
+  db.prepare(`INSERT INTO questions (id, participant_id, text, consent_at, status, created_at, updated_at)
+              VALUES (?, ?, ?, ?, 'pending', ?, ?)`)
+    .run(id, req.participant.id, text, createdAt, createdAt, createdAt);
   res.status(201).json(serializeQuestionForParticipant(getQuestion(id)));
 });
 
@@ -284,7 +275,7 @@ app.get('/api/questions/mine', requireParticipant, (req, res) => {
 
 // ---- Admin (organisateurs & pasteurs) ----
 app.post('/api/admin/login', loginLimiter, (req, res) => {
-  const { code } = req.body || {};
+  const { code } = validateAdminLoginInput(req.body);
   if (!safeEqual(code, ADMIN_CODE)) {
     return res.status(401).json({ error: 'bad_code' });
   }
@@ -293,6 +284,12 @@ app.post('/api/admin/login', loginLimiter, (req, res) => {
   db.prepare('INSERT INTO admin_sessions (token, created_at, expires_at) VALUES (?, ?, ?)')
     .run(t, now(), expires);
   res.json({ token: t, expiresAt: expires });
+});
+
+// Révoque immédiatement la session courante (et uniquement celle-ci).
+app.post('/api/admin/logout', requireAdmin, (req, res) => {
+  db.prepare('DELETE FROM admin_sessions WHERE token = ?').run(req.adminToken);
+  res.json({ ok: true });
 });
 
 app.get('/api/admin/questions', requireAdmin, (_req, res) => {
@@ -305,17 +302,31 @@ app.get('/api/admin/questions', requireAdmin, (_req, res) => {
 });
 
 app.post('/api/admin/questions/:id/assign', requireAdmin, (req, res) => {
-  const { pastorName, place, time } = req.body || {};
-  if (![pastorName, place, time].every(v => typeof v === 'string' && v.trim())) {
-    return res.status(400).json({ error: 'missing_fields' });
-  }
+  const { pastorName, place, time } = validateQuestionAssignmentInput(req.body);
   const q = getQuestion(req.params.id);
   if (!q) return res.status(404).json({ error: 'not_found' });
   db.prepare(`UPDATE questions
               SET status = 'assigned', pastor_name = ?, place = ?, time = ?, updated_at = ?
               WHERE id = ?`)
-    .run(pastorName.trim(), place.trim(), time.trim(), now(), q.id);
+    .run(pastorName, place, time, now(), q.id);
   res.json(serializeQuestionForAdmin({ ...getQuestion(q.id), first_name: '', last_name: '' }));
+});
+
+// Le check-in est une action organisateur explicite et idempotente.
+app.post('/api/admin/participants/:id/checkin', requireAdmin, (req, res) => {
+  const participant = db.prepare('SELECT id FROM participants WHERE id = ?').get(req.params.id);
+  if (!participant) return res.status(404).json({ error: 'not_found' });
+  const createdAt = now();
+  const result = db.prepare('INSERT OR IGNORE INTO checkins (participant_id, created_at) VALUES (?, ?)')
+    .run(participant.id, createdAt);
+  const checkin = db.prepare('SELECT created_at FROM checkins WHERE participant_id = ?').get(participant.id);
+  res.status(result.changes ? 201 : 200).json({
+    ok: true,
+    participantId: participant.id,
+    checkedIn: true,
+    created: result.changes === 1,
+    createdAt: checkin.created_at,
+  });
 });
 
 app.get('/api/admin/stats', requireAdmin, (_req, res) => {
@@ -363,34 +374,31 @@ app.get('/api/admin/housing', requireAdmin, (_req, res) => {
 
 // Import en masse : [{firstName, lastName, phone?, country?, address?, notes?}]
 app.post('/api/admin/housing/import', requireAdmin, (req, res) => {
-  const rows = Array.isArray(req.body?.rows) ? req.body.rows : null;
-  if (!rows || !rows.length) return res.status(400).json({ error: 'empty_rows' });
-  let created = 0, linked = 0;
-  for (const r of rows) {
-    const firstName = String(r.firstName || '').trim();
-    const lastName = String(r.lastName || '').trim();
-    if (!firstName && !lastName) continue;
-    const id = randomUUID();
-    db.prepare(`INSERT INTO housing (id, first_name, last_name, phone, country, address, notes, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-      .run(id, firstName, lastName, String(r.phone || '').trim(), String(r.country || '').trim(),
-           String(r.address || '').trim(), String(r.notes || '').trim(), now(), now());
-    created++;
-    if (autoLinkHousingRow(db.prepare('SELECT * FROM housing WHERE id = ?').get(id))) linked++;
-  }
-  res.status(201).json({ created, linked });
+  const { rows } = validateHousingImportInput(req.body);
+  const insert = db.prepare(`INSERT INTO housing
+    (id, first_name, last_name, phone, country, address, notes, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  const importRows = db.transaction(items => {
+    for (const row of items) {
+      const id = randomUUID();
+      const createdAt = now();
+      insert.run(id, row.firstName, row.lastName, row.phone, row.country,
+        row.address, row.notes, createdAt, createdAt);
+    }
+  });
+  importRows(rows);
+  // Champ conservé pour compatibilité, mais toute liaison est désormais manuelle.
+  res.status(201).json({ created: rows.length, linked: 0 });
 });
 
 app.put('/api/admin/housing/:id', requireAdmin, (req, res) => {
   const h = db.prepare('SELECT * FROM housing WHERE id = ?').get(req.params.id);
   if (!h) return res.status(404).json({ error: 'not_found' });
-  const b = req.body || {};
+  const b = validateHousingUpdateInput(req.body, h);
   db.prepare(`UPDATE housing SET first_name = ?, last_name = ?, phone = ?, country = ?, address = ?, notes = ?, updated_at = ?
               WHERE id = ?`)
     .run(
-      String(b.firstName ?? h.first_name).trim(), String(b.lastName ?? h.last_name).trim(),
-      String(b.phone ?? h.phone).trim(), String(b.country ?? h.country).trim(),
-      String(b.address ?? h.address).trim(), String(b.notes ?? h.notes).trim(), now(), h.id
+      b.firstName, b.lastName, b.phone, b.country, b.address, b.notes, now(), h.id
     );
   res.json(serializeHousing(db.prepare('SELECT * FROM housing WHERE id = ?').get(h.id)));
 });
@@ -399,7 +407,7 @@ app.put('/api/admin/housing/:id', requireAdmin, (req, res) => {
 app.post('/api/admin/housing/:id/link', requireAdmin, (req, res) => {
   const h = db.prepare('SELECT * FROM housing WHERE id = ?').get(req.params.id);
   if (!h) return res.status(404).json({ error: 'not_found' });
-  const participantId = req.body?.participantId || null;
+  const { participantId } = validateHousingLinkInput(req.body);
   if (participantId) {
     const p = db.prepare('SELECT id FROM participants WHERE id = ?').get(participantId);
     if (!p) return res.status(400).json({ error: 'unknown_participant' });
@@ -449,6 +457,10 @@ app.post('/api/admin/media', uploadLimiter, requireAdmin, upload.single('file'),
 // Défense en profondeur : ré-encodage + suppression des métadonnées (GPS) côté serveur.
 app.post('/api/photos', uploadLimiter, requireParticipant, upload.single('photo'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'missing_file' });
+  if (req.body?.consent !== 'true') {
+    dropFile(req.file);
+    return res.status(400).json({ error: 'explicit_consent_required', field: 'consent' });
+  }
   if (!isAllowed(req.file, IMAGE_EXT)) {
     dropFile(req.file);
     return res.status(400).json({ error: 'bad_file_type' });
@@ -456,15 +468,17 @@ app.post('/api/photos', uploadLimiter, requireParticipant, upload.single('photo'
   const name = await processImage(req.file);
   if (!name) return res.status(400).json({ error: 'invalid_image' });
   const id = randomUUID();
-  db.prepare('INSERT INTO photos (id, participant_id, file, created_at) VALUES (?, ?, ?, ?)')
-    .run(id, req.participant.id, name, now());
-  res.status(201).json({ id, url: `/media/${name}` });
+  const createdAt = now();
+  db.prepare("INSERT INTO photos (id, participant_id, file, status, consent_at, created_at) VALUES (?, ?, ?, 'pending', ?, ?)")
+    .run(id, req.participant.id, name, createdAt, createdAt);
+  res.status(201).json({ id, url: `/media/${name}`, status: 'pending' });
 });
 
 app.get('/api/photos', requireParticipant, (_req, res) => {
   const rows = db.prepare(`
     SELECT ph.id, ph.file, ph.created_at, p.first_name, p.last_name
     FROM photos ph JOIN participants p ON p.id = ph.participant_id
+    WHERE ph.status = 'approved'
     ORDER BY ph.created_at DESC LIMIT 300
   `).all();
   res.json(rows.map(r => ({
@@ -476,14 +490,23 @@ app.get('/api/photos', requireParticipant, (_req, res) => {
 // Modération : liste + suppression côté admin
 app.get('/api/admin/photos', requireAdmin, (_req, res) => {
   const rows = db.prepare(`
-    SELECT ph.id, ph.file, ph.created_at, p.first_name, p.last_name
+    SELECT ph.id, ph.file, ph.status, ph.created_at, p.first_name, p.last_name
     FROM photos ph JOIN participants p ON p.id = ph.participant_id
-    ORDER BY ph.created_at DESC LIMIT 1000
+    ORDER BY CASE ph.status WHEN 'pending' THEN 0 ELSE 1 END, ph.created_at DESC LIMIT 1000
   `).all();
   res.json(rows.map(r => ({
-    id: r.id, url: `/media/${r.file}`, createdAt: r.created_at,
+    id: r.id, url: `/media/${r.file}`, status: r.status, createdAt: r.created_at,
     author: `${r.first_name} ${r.last_name}`.trim()
   })));
+});
+
+// Approbation idempotente avant publication dans la pellicule publique.
+app.post('/api/admin/photos/:id/approve', requireAdmin, (req, res) => {
+  const photo = db.prepare('SELECT id, status FROM photos WHERE id = ?').get(req.params.id);
+  if (!photo) return res.status(404).json({ error: 'not_found' });
+  const changed = photo.status !== 'approved';
+  if (changed) db.prepare("UPDATE photos SET status = 'approved' WHERE id = ?").run(photo.id);
+  res.json({ ok: true, id: photo.id, status: 'approved', changed });
 });
 
 app.delete('/api/admin/photos/:id', requireAdmin, (req, res) => {
@@ -525,6 +548,15 @@ function serializeQuestionForAdmin(q) {
 // ---- Gestion centralisée des erreurs (dont fichiers trop volumineux) ----
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, _next) => {
+  if (err instanceof InputValidationError) {
+    return res.status(err.status).json({ error: err.code, field: err.field, reason: err.reason });
+  }
+  if (err?.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'invalid_json' });
+  }
+  if (err?.type === 'entity.too.large') {
+    return res.status(413).json({ error: 'payload_too_large' });
+  }
   if (err instanceof multer.MulterError) {
     const code = err.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
     return res.status(code).json({ error: err.code === 'LIMIT_FILE_SIZE' ? 'file_too_large' : 'upload_error' });
@@ -539,8 +571,11 @@ setInterval(() => {
 }, 3600 * 1000).unref();
 
 const server = app.listen(PORT, () => {
-  console.log(`Paris 2026 API en écoute sur le port ${PORT}`);
+  const address = server.address();
+  console.log(`Paris 2026 API en écoute sur le port ${typeof address === 'object' ? address.port : PORT}`);
 });
+
+export { app, server };
 
 // Arrêt propre (Docker/systemd envoient SIGTERM)
 for (const sig of ['SIGTERM', 'SIGINT']) {

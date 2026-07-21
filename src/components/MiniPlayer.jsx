@@ -24,7 +24,13 @@ export default function MiniPlayer({ t, content, audioCurrent, audioPlaying, aud
         width: `${audioProgress}%`
       }}></div>
 
-      <div onClick={() => toggleTrack(audioCurrent)} style={{
+      <button
+        type="button"
+        className="ui-button-reset"
+        onClick={() => toggleTrack(audioCurrent)}
+        aria-label={title}
+        aria-pressed={audioPlaying}
+        style={{
         width: '34px',
         height: '34px',
         borderRadius: '50%',
@@ -45,7 +51,7 @@ export default function MiniPlayer({ t, content, audioCurrent, audioPlaying, aud
             <polygon points="6 3 20 12 6 21 6 3"></polygon>
           </svg>
         )}
-      </div>
+      </button>
 
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <div style={{
@@ -62,7 +68,12 @@ export default function MiniPlayer({ t, content, audioCurrent, audioPlaying, aud
         }}>{t('audios_playing')}</div>
       </div>
 
-      <div onClick={closeMiniPlayer} style={{
+      <button
+        type="button"
+        className="ui-button-reset"
+        onClick={closeMiniPlayer}
+        aria-label={t('modal_close')}
+        style={{
         width: '26px',
         height: '26px',
         display: 'flex',
@@ -74,7 +85,7 @@ export default function MiniPlayer({ t, content, audioCurrent, audioPlaying, aud
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 6L6 18M6 6l12 12"></path>
         </svg>
-      </div>
+      </button>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 export default function Toast({ text }) {
   return (
-    <div style={{
+    <div role="status" aria-live="polite" aria-atomic="true" style={{
       background: '#12172A',
       color: '#fff',
       padding: '12px 14px',
