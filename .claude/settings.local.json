@@ -76,7 +76,11 @@
       "Bash(awk '{print \"  \",$9,$5}')",
       "Bash(VITE_API_URL=same-origin npm run build:demo)",
       "Bash(node --test tests/api.test.mjs)",
-      "Bash(node -e \"console.log\\('test script actuel :', require\\('./package.json'\\).scripts.test\\)\")"
+      "Bash(node -e \"console.log\\('test script actuel :', require\\('./package.json'\\).scripts.test\\)\")",
+      "Bash(chmod +x scripts/deploy-app.sh)",
+      "Bash(bash -n scripts/deploy-app.sh)",
+      "Bash(./scripts/deploy-app.sh)",
+      "Bash(echo \"--- code de sortie attendu 1, obtenu : $? ---\")"
     ]
   }
 }
