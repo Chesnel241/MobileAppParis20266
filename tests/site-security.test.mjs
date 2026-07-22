@@ -20,6 +20,12 @@ const AMORCE = `
   end $$;
   create table if not exists public.inscriptions (id uuid primary key default gen_random_uuid(), full_name text, email text, status text);
   create table if not exists public.internal_members (id uuid primary key default gen_random_uuid(), email text);
+  -- Reproduction de la fonction du formulaire public, en SECURITY INVOKER :
+  -- la migration doit la basculer elle-même en SECURITY DEFINER.
+  create or replace function public.check_email_exists(check_email text)
+  returns boolean language sql stable as $fn$
+    select exists (select 1 from public.inscriptions where lower(email) = lower(check_email));
+  $fn$;
 `;
 
 async function appliquer(fois = 1) {
@@ -77,6 +83,29 @@ test('internal_members est totalement fermé aux anonymes', async () => {
   `);
   assert.ok(rows.length > 0, 'aucune policy sur internal_members');
   for (const r of rows) assert.doesNotMatch(r.roles, /anon/);
+  await db.close();
+});
+
+// Sans cela, le formulaire public répondrait « e-mail inconnu » à tout le monde
+// et laisserait passer les doublons.
+test('la vérification de doublon du formulaire survit à la fermeture des lectures', async () => {
+  const db = await appliquer();
+  const { rows } = await db.query(`
+    select p.prosecdef, p.proconfig::text as config
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'check_email_exists'
+  `);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].prosecdef, true, 'check_email_exists doit passer en SECURITY DEFINER');
+  assert.match(rows[0].config, /search_path/, 'search_path doit être figé');
+  await db.close();
+});
+
+test('l’absence de check_email_exists ne bloque pas la migration', async () => {
+  const db = new PGlite();
+  await db.exec(AMORCE);
+  await db.exec('drop function if exists public.check_email_exists(text)');
+  await db.exec(sql); // ne doit pas lever
   await db.close();
 });
 

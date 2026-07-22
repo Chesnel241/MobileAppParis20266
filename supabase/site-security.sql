@@ -111,6 +111,30 @@ create policy internal_members_admin_all on public.internal_members
 
 
 -- ----------------------------------------------------------------------------
+-- 3 bis. Ne pas casser la vérification de doublon du formulaire
+-- ----------------------------------------------------------------------------
+-- Le formulaire public appelle check_email_exists() avant d'envoyer une
+-- inscription. Cette fonction lit « inscriptions » : maintenant que la lecture
+-- anonyme est fermée, elle doit s'exécuter avec les droits de son propriétaire,
+-- sans quoi le formulaire signalerait à tort « e-mail inconnu ».
+-- On ne touche pas à son contenu, seulement à son mode d'exécution.
+
+do $$
+declare fn record;
+begin
+  for fn in
+    select p.oid::regprocedure as signature
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'check_email_exists'
+  loop
+    execute format('alter function %s security definer', fn.signature);
+    execute format('alter function %s set search_path = public, pg_temp', fn.signature);
+    raise notice 'check_email_exists sécurisée : %', fn.signature;
+  end loop;
+end $$;
+
+
+-- ----------------------------------------------------------------------------
 -- 4. OBLIGATOIRE — se déclarer administrateur
 -- ----------------------------------------------------------------------------
 -- Remplacez les adresses par celles des organisateurs, puis exécutez.
