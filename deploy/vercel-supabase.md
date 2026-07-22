@@ -81,6 +81,30 @@ Puis, dans **Settings ▸ Environment Variables** du projet Vercel :
 
 > `VITE_API_URL=same-origin` : l'app et l'API partagent le domaine, donc **aucun CORS
 > à configurer**. C'est le principal avantage de tout héberger sur Vercel.
+> Cette valeur est aussi figée dans `vercel.json`, et une page servie depuis un vrai
+> domaine s'y rabat d'elle-même : un oubli ne peut plus produire une application
+> déconnectée.
+
+### ⚠️ Ne pas intervertir les deux clés Supabase
+
+C'est l'erreur la plus coûteuse, parce qu'elle ne se voit pas :
+
+| Variable | Clé attendue | Si on se trompe |
+|---|---|---|
+| `SUPABASE_ANON_KEY` | **anon public** / `sb_publishable_…` | la base entière est exposée au navigateur |
+| `SUPABASE_SERVICE_ROLE_KEY` | **service_role** / `sb_secret_…` | RLS bloque **toutes les écritures** : l'app s'affiche normalement, mais aucune inscription n'est enregistrée |
+
+L'API refuse désormais de démarrer dans les deux cas. Après chaque changement de clé,
+vérifiez que l'écriture fonctionne vraiment :
+
+```bash
+curl -s -X POST https://VOTRE-DOMAINE/api/participants -H 'Content-Type: application/json' -d '{"firstName":"Test","lastName":"Verification","phone":"+33600000099","country":"FR"}'
+```
+
+Réponse attendue : `{"id":…,"token":"…"}`. Si vous lisez `{"error":"server_error"}`,
+la clé `service_role` n'est pas la bonne — `npx vercel logs VOTRE-DOMAINE` le confirme
+(`violates row-level security policy`). Supprimez ensuite ce participant de test dans
+Supabase (table `participants`).
 
 Redéployez pour que les variables soient prises en compte (`npx vercel --prod`).
 

@@ -86,7 +86,10 @@
       "Bash(node --test tests/config-secret-leak.test.mjs)",
       "Bash(sed 's/^/lint warnings: /')",
       "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\(JSON.stringify\\(p.scripts,null,2\\)\\)\")",
-      "Bash(unset VITE_API_URL)"
+      "Bash(unset VITE_API_URL)",
+      "Bash(curl -s -X POST https://paris-2026-app.vercel.app/api/admin/login -H 'Content-Type: application/json' -d '{\"accessToken\":\"bidon\"}')",
+      "Bash(timeout 60 npx vercel logs paris-2026-app.vercel.app --json)",
+      "Bash(npx vercel *)"
     ]
   }
 }
