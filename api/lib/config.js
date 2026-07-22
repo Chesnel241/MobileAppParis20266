@@ -18,14 +18,18 @@ function parseSupabaseAuth(env) {
   if (!url || !anonKey) return null;
   const adminEmails = parseAdminEmails(env.SUPABASE_ADMIN_EMAILS);
   const adminRole = String(env.SUPABASE_ADMIN_ROLE || '').trim();
+  const flag = (name) => /^(1|true|oui|yes)$/i.test(String(env[name] || '').trim());
+  // Mécanisme recommandé : la table app_admins, partagée avec les policies RLS
+  // du site. Un organisateur déclaré une fois ouvre les deux espaces.
+  const fromTable = flag('SUPABASE_ADMIN_FROM_TABLE');
   // Ouvrir l'administration à tout compte du projet doit être un choix assumé,
   // écrit noir sur blanc dans la configuration — jamais un effet de bord.
-  const anyAccount = /^(1|true|oui|yes)$/i.test(String(env.SUPABASE_ADMIN_ANY_ACCOUNT || '').trim());
-  if (adminEmails.length === 0 && !adminRole && !anyAccount) {
-    fail("SUPABASE_ADMIN_EMAILS, SUPABASE_ADMIN_ROLE ou SUPABASE_ADMIN_ANY_ACCOUNT requis, "
-      + "sinon tout compte deviendrait admin sans que personne ne l'ait décidé.");
+  const anyAccount = flag('SUPABASE_ADMIN_ANY_ACCOUNT');
+  if (adminEmails.length === 0 && !adminRole && !anyAccount && !fromTable) {
+    fail("SUPABASE_ADMIN_FROM_TABLE, SUPABASE_ADMIN_EMAILS, SUPABASE_ADMIN_ROLE ou "
+      + "SUPABASE_ADMIN_ANY_ACCOUNT requis, sinon l'administration serait sans gardien.");
   }
-  return Object.freeze({ url, anonKey, adminEmails: Object.freeze(adminEmails), adminRole, anyAccount });
+  return Object.freeze({ url, anonKey, adminEmails: Object.freeze(adminEmails), adminRole, anyAccount, fromTable });
 }
 
 function parseVapid(env) {

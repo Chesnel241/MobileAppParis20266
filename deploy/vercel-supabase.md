@@ -74,8 +74,8 @@ Puis, dans **Settings ▸ Environment Variables** du projet Vercel :
 | `SUPABASE_URL` | l'URL du projet Supabase |
 | `SUPABASE_SERVICE_ROLE_KEY` | la clé service_role (**secrète**) |
 | `SUPABASE_ANON_KEY` | la clé anon |
-| `SUPABASE_ADMIN_EMAILS` | e-mails des organisateurs, séparés par des virgules |
-| `SUPABASE_ADMIN_ANY_ACCOUNT` | `1` pour accepter **tout compte confirmé** du projet, comme le site (voir ci-dessous) |
+| `SUPABASE_ADMIN_FROM_TABLE` | `1` — les administrateurs viennent de la table `app_admins` (recommandé, voir ci-dessous) |
+| `SUPABASE_ADMIN_EMAILS` | e-mails des organisateurs, séparés par des virgules (filet de secours) |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | clés push + `mailto:sfdrm.lwm@gmail.com` |
 | `VITE_API_URL` | `same-origin` |
 | `ADMIN_CODE` *(optionnel)* | code de secours, 16 caractères minimum |
@@ -88,32 +88,30 @@ Puis, dans **Settings ▸ Environment Variables** du projet Vercel :
 
 ### Comptes administrateurs partagés avec le site
 
-Le site et l'application utilisent le **même projet Supabase**. Le site laisse
-entrer dans son espace logistique **tout compte Supabase Auth**, sans contrôle de
-rôle. Pour que les mêmes identifiants ouvrent les deux, posez
-`SUPABASE_ADMIN_ANY_ACCOUNT=1`.
+Le site et l'application utilisent le **même projet Supabase**. Les
+administrateurs sont déclarés **une seule fois**, dans la table `app_admins` :
+les policies RLS du site et l'API de l'application s'appuient toutes deux sur
+elle. Posez `SUPABASE_ADMIN_FROM_TABLE=1` côté Vercel.
 
-> ⛔ **Condition indispensable** : l'inscription libre doit être **fermée** sur
-> Supabase. La clé publiable est publiée dans le JavaScript du site ; tant que
-> `disable_signup` vaut `false`, n'importe quel internaute peut se créer un
-> compte et deviendrait alors administrateur de l'application — accès à tous les
-> inscrits, aux logements, aux photos, et pouvoir de notifier tout le monde.
->
-> Supabase ▸ **Authentication ▸ Sign In / Providers ▸ Email** ▸ décochez
-> **« Allow new users to sign up »**.
->
-> L'API le vérifie à chaque connexion : tant que l'inscription reste ouverte, la
-> connexion administrateur est refusée (`503 signup_open`) plutôt que d'ouvrir
-> l'accès à tous. Vérification :
->
-> ```bash
-> curl -s "$SUPABASE_URL/auth/v1/settings" -H "apikey: $SUPABASE_ANON_KEY" | grep -o '"disable_signup":[a-z]*'
-> ```
->
-> Attendu : `"disable_signup":true`.
+Être authentifié ne suffit pas : il faut être déclaré. C'est ce qui distingue un
+organisateur d'un simple visiteur ayant créé un compte.
 
-Les comptes se créent alors dans Supabase ▸ **Authentication ▸ Users ▸ Add user**,
-en cochant **Auto Confirm User** (un compte non confirmé est refusé).
+**Mise en place** — exécutez [`supabase/site-security.sql`](../supabase/site-security.sql)
+dans Supabase ▸ SQL Editor. Le script crée `app_admins`, la fonction
+`is_app_admin()` et les policies. **L'étape 4 du script est obligatoire** :
+remplacez l'adresse d'exemple par celles de vos organisateurs, sinon plus
+personne n'accède aux inscriptions.
+
+**Ajouter un organisateur plus tard** — créez son compte dans
+Authentication ▸ Users ▸ **Add user** (cochez **Auto Confirm User**), puis :
+
+```sql
+insert into public.app_admins (user_id, email, label)
+select id, email, 'organisation' from auth.users where lower(email) = 'nouvel.organisateur@exemple.fr'
+on conflict (user_id) do nothing;
+```
+
+**Retirer un accès** — `delete from public.app_admins where lower(email) = '…';`
 
 ### Hébergements : source unique avec le site
 

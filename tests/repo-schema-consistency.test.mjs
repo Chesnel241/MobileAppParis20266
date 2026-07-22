@@ -10,6 +10,16 @@ const schemaRaw = readFileSync(new URL('../supabase/schema.sql', import.meta.url
 const schemaSql = schemaRaw.split('-- ---------- Storage')[0];
 const repoSrc = readFileSync(new URL('../api/lib/repo.js', import.meta.url), 'utf8');
 
+// Tables que l'application lit sans les posséder. Elles appartiennent au site de
+// la convention, qui partage le même projet Supabase : « inscriptions » et
+// « internal_members » sont tenues par le site, « app_admins » est créée par
+// supabase/site-security.sql (elle référence auth.users, absent ici).
+// Les citer explicitement rend cette dépendance visible plutôt que tacite ; la
+// lecture de ces tables est défensive dans repo.js, justement parce que nous
+// n'en maîtrisons pas la forme.
+const TABLES_DU_SITE = new Set(['inscriptions', 'internal_members', 'app_admins']);
+const COLONNES_DU_SITE = new Set(['user_id']);
+
 async function introspect() {
   const db = new PGlite();
   await db.exec(schemaSql);
@@ -31,7 +41,9 @@ async function introspect() {
 test('toutes les tables utilisées par le repo existent dans le schéma', async () => {
   const { columns } = await introspect();
   const used = [...repoSrc.matchAll(/\.from\('([a-z_]+)'\)/g)].map(m => m[1]);
-  const unique = [...new Set(used)].filter(t => t !== 'media'); // 'media' = bucket Storage
+  const unique = [...new Set(used)]
+    .filter(t => t !== 'media')              // 'media' = bucket Storage
+    .filter(t => !TABLES_DU_SITE.has(t));
   assert.ok(unique.length > 0, 'aucune table détectée dans le repo');
   for (const table of unique) {
     assert.ok(columns.has(table), `table inconnue utilisée par le repo : ${table}`);
@@ -44,6 +56,7 @@ test('les colonnes référencées dans les filtres du repo existent', async () =
   // Colonnes citées dans .eq()/.gte()/.lt()/.is()/.not()/.neq()/.order()
   const referenced = [...repoSrc.matchAll(/\.(?:eq|gte|lt|is|neq|order)\('([a-z_]+)'/g)].map(m => m[1]);
   for (const col of new Set(referenced)) {
+    if (COLONNES_DU_SITE.has(col)) continue;
     assert.ok(all.has(col), `colonne inconnue référencée par le repo : ${col}`);
   }
 });

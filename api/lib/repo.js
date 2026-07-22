@@ -272,6 +272,25 @@ export async function deleteHousing(id) {
   await supabase.from('housing').delete().eq('id', id);
 }
 
+/**
+ * Un compte Supabase est-il administrateur ? La réponse vient de la table
+ * app_admins, seule source de vérité, partagée avec le site : les policies RLS
+ * du site s'appuient sur la même table. Déclarer un organisateur une fois lui
+ * ouvre les deux espaces.
+ *
+ * Lu avec la clé service_role : le navigateur n'interroge jamais cette table.
+ */
+export async function isAppAdmin(userId) {
+  if (!userId) return false;
+  const { data, error } = await supabase.from('app_admins').select('user_id').eq('user_id', userId).maybeSingle();
+  if (error) {
+    // Table absente ou illisible : on refuse plutôt que d'ouvrir en grand.
+    console.warn(`[ADMIN] app_admins illisible : ${error.message}`);
+    return false;
+  }
+  return Boolean(data);
+}
+
 // Colonnes d'hébergement communes aux deux tables du site.
 const SITE_HOUSING_COLUMNS = 'id, full_name, phone_code, phone, housing_address, room_number, housing_notes, start_date, end_date';
 

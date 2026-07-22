@@ -125,7 +125,12 @@ app.post('/api/admin/login', asyncHandler(async (req, res) => {
     }
     const user = await fetchSupabaseUser(supabaseAccessToken, config.supabase);
     if (!user) return res.status(401).json({ error: 'bad_supabase_token' });
-    if (!isAuthorizedAdmin(user, config.supabase)) return res.status(403).json({ error: 'not_an_admin' });
+    // La table app_admins fait autorité et est partagée avec les policies RLS
+    // du site : un organisateur déclaré une fois ouvre les deux espaces.
+    const inTable = config.supabase.fromTable && await repo.isAppAdmin(user.id);
+    if (!inTable && !isAuthorizedAdmin(user, config.supabase)) {
+      return res.status(403).json({ error: 'not_an_admin' });
+    }
     grantedTo = adminLabel(user);
   } else {
     if (!config.allowAdminCode) return res.status(400).json({ error: 'code_login_disabled' });

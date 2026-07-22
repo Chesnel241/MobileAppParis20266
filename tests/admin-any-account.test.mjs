@@ -28,10 +28,24 @@ test('la liste blanche continue de fonctionner seule', () => {
   assert.equal(isAuthorizedAdmin(confirme, { adminEmails: ['autre@exemple.fr'] }), false);
 });
 
+const base = { SUPABASE_URL: 'https://p.supabase.co', SUPABASE_ANON_KEY: 'sb_publishable_x' };
+
 test('le mode doit être demandé explicitement dans la configuration', () => {
-  const base = { SUPABASE_URL: 'https://p.supabase.co', SUPABASE_ANON_KEY: 'sb_publishable_x' };
   assert.throws(() => loadConfig(base), /SUPABASE_ADMIN_ANY_ACCOUNT/);
   const config = loadConfig({ ...base, SUPABASE_ADMIN_ANY_ACCOUNT: '1' });
   assert.equal(config.supabase.anyAccount, true);
-  assert.equal(loadConfig({ ...base, SUPABASE_ADMIN_ANY_ACCOUNT: 'non' , SUPABASE_ADMIN_EMAILS: 'a@b.fr' }).supabase.anyAccount, false);
+  assert.equal(loadConfig({ ...base, SUPABASE_ADMIN_ANY_ACCOUNT: 'non', SUPABASE_ADMIN_EMAILS: 'a@b.fr' }).supabase.anyAccount, false);
+});
+
+// Mécanisme retenu : la table app_admins, partagée avec les policies RLS du
+// site. Être authentifié ne suffit plus, il faut y être déclaré.
+test('la table app_admins suffit à configurer l’administration', () => {
+  const config = loadConfig({ ...base, SUPABASE_ADMIN_FROM_TABLE: '1' });
+  assert.equal(config.supabase.fromTable, true);
+  assert.equal(config.supabase.anyAccount, false);
+  assert.equal(config.supabase.adminEmails.length, 0);
+});
+
+test('sans table ni liste ni ouverture, la configuration est refusée', () => {
+  assert.throws(() => loadConfig({ ...base, SUPABASE_ADMIN_FROM_TABLE: 'non' }), /SUPABASE_ADMIN_FROM_TABLE/);
 });

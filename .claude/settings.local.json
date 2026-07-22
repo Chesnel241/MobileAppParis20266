@@ -106,7 +106,10 @@
       "Bash(curl -s https://uiqfzumvchtwnxqnvcxx.supabase.co/rest/v1/ -H 'apikey: sb_publishable_FU3tFM-LFmzybajIwLBQgQ_rwBACQEb' -H 'Authorization: Bearer sb_publishable_FU3tFM-LFmzybajIwLBQgQ_rwBACQEb')",
       "Bash(curl -s https://uiqfzumvchtwnxqnvcxx.supabase.co/auth/v1/settings -H 'apikey: sb_publishable_FU3tFM-LFmzybajIwLBQgQ_rwBACQEb')",
       "Bash(node -e 'let s=\"\";process.stdin.on\\(\"data\",d=>s+=d\\).on\\(\"end\",\\(\\)=>{const j=JSON.parse\\(s\\);console.log\\(JSON.stringify\\({disable_signup:j.disable_signup,mailer_autoconfirm:j.mailer_autoconfirm,external_email:j.external?.email,external_anonymous:j.external?.anonymous},null,2\\)\\)}\\)')",
-      "Bash(node -e 'import\\(\"./api/lib/normalize.js\"\\).then\\(m=>console.log\\(\"normName\\(\\\\\"Éloïse MBEMBA\\\\\"\\) =\",JSON.stringify\\(m.normName\\(\"Éloïse  MBEMBA\"\\)\\),\"| normPhone\\(\\\\\"+33 6 12 34 56 78\\\\\"\\) =\",m.normPhone\\(\"+33 6 12 34 56 78\"\\)\\)\\)')"
+      "Bash(node -e 'import\\(\"./api/lib/normalize.js\"\\).then\\(m=>console.log\\(\"normName\\(\\\\\"Éloïse MBEMBA\\\\\"\\) =\",JSON.stringify\\(m.normName\\(\"Éloïse  MBEMBA\"\\)\\),\"| normPhone\\(\\\\\"+33 6 12 34 56 78\\\\\"\\) =\",m.normPhone\\(\"+33 6 12 34 56 78\"\\)\\)\\)')",
+      "Bash(node -e \"console.log\\(require\\('/private/tmp/claude-501/-Users-chesnelekoghamacos-paris-2026-app/68d3bf1f-1b22-48b6-bbe2-2b9070d18c44/scratchpad/participant.json'\\).token\\)\")",
+      "Bash(curl -s -X DELETE https://paris-2026-app.vercel.app/api/participants/me -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(curl -s -o /dev/null -w 'profil %{http_code} \\(401 attendu\\)\\\\n' https://paris-2026-app.vercel.app/api/participants/me -H 'Authorization: Bearer __CMDSUB_OUTPUT__')"
     ]
   }
 }

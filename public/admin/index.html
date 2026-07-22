@@ -234,8 +234,9 @@
         showLoginError("Administration verrouillée : l'inscription libre est encore ouverte sur Supabase. "
           + 'Authentication ▸ Sign In / Providers ▸ Email ▸ désactivez « Allow new users to sign up », puis réessayez.');
       } else if (msg.includes('403')) {
-        // Compte valide, mais non autorisé pour l'administration mobile.
-        showLoginError("Ce compte n'est pas autorisé à administrer l'application mobile.");
+        // Compte valide, mais non déclaré comme administrateur.
+        showLoginError("Ce compte n'est pas administrateur. Un organisateur doit l'ajouter "
+          + 'à la table app_admins dans Supabase (voir supabase/site-security.sql).');
       } else {
         showLoginError('Connexion impossible. Réessayez.');
       }
