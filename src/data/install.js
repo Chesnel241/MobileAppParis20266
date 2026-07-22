@@ -98,7 +98,3 @@ export async function triggerNativeInstall() {
   listeners.forEach(fn => fn(false));
   return outcome === 'accepted';
 }
-
-/** URL publique de l'application, pour le QR code et le partage. */
-export const appUrl = () =>
-  typeof window === 'undefined' ? '' : `${window.location.origin}${import.meta.env.BASE_URL || '/'}`;

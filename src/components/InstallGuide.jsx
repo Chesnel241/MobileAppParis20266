@@ -5,8 +5,8 @@ import {
   onInstallPromptChange,
   hasNativePrompt,
   triggerNativeInstall,
-  appUrl,
 } from '../data/install';
+import { EVENT_SITE_HOST } from '../data/constants';
 
 // Guide d'installation bloquant : tant que l'application n'est pas ajoutée à
 // l'écran d'accueil, le participant ne peut pas entrer. C'est la seule façon
@@ -84,7 +84,6 @@ export default function InstallGuide({ lang = 'fr', onSkip }) {
   const [promptReady, setPromptReady] = useState(hasNativePrompt);
   const [busy, setBusy] = useState(false);
   const [waited, setWaited] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   const fr = lang === 'fr';
 
@@ -115,14 +114,6 @@ export default function InstallGuide({ lang = 'fr', onSkip }) {
     const id = setTimeout(() => setWaited(true), 25000);
     return () => clearTimeout(id);
   }, []);
-
-  const copyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(appUrl());
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    } catch { /* presse-papiers indisponible */ }
-  };
 
   const install = async () => {
     setBusy(true);
@@ -247,22 +238,11 @@ export default function InstallGuide({ lang = 'fr', onSkip }) {
               {fr ? <>Dans Safari, suivez le guide pour ajouter à l'écran d'accueil.</>
                   : <>In Safari, follow the guide to add it to your Home Screen.</>}
             </Step>
-            <button
-              type="button"
-              onClick={copyLink}
-              style={{
-                width: '100%',
-                marginTop: '10px',
-                background: '#fff',
-                color: NAVY,
-                border: 0,
-                borderRadius: '100px',
-                padding: '13px',
-                fontWeight: 700,
-                fontSize: '14px',
-                cursor: 'pointer',
-              }}
-            >{copied ? (fr ? 'Lien copié ✓' : 'Link copied ✓') : (fr ? 'Copier le lien' : 'Copy the link')}</button>
+            <div style={{ fontSize: '13px', lineHeight: 1.55, marginTop: '14px', opacity: 0.85 }}>
+              {fr
+                ? <>Si vous ne trouvez pas cette option, ouvrez <strong>{EVENT_SITE_HOST}</strong> dans Safari : le lien vers l'application s'y trouve.</>
+                : <>If you can’t find that option, open <strong>{EVENT_SITE_HOST}</strong> in Safari: the link to the app is there.</>}
+            </div>
           </>
         )}
 
@@ -319,33 +299,19 @@ export default function InstallGuide({ lang = 'fr', onSkip }) {
           <>
             <div style={{ fontSize: '14px', lineHeight: 1.55, marginBottom: '16px' }}>
               {fr
-                ? "L'application est conçue pour votre téléphone. Ouvrez cette adresse sur votre mobile pour l'installer :"
-                : 'The app is made for your phone. Open this address on your mobile to install it:'}
+                ? <>L'application est conçue pour votre téléphone. Depuis votre mobile, ouvrez le site de la convention et touchez le lien vers l'application :</>
+                : <>The app is made for your phone. From your mobile, open the convention website and tap the link to the app:</>}
             </div>
             <div style={{
               background: 'rgba(0,0,0,0.25)',
               borderRadius: '12px',
               padding: '12px',
-              fontSize: '13px',
+              fontSize: '15px',
+              fontWeight: 700,
               wordBreak: 'break-all',
               textAlign: 'center',
               marginBottom: '14px',
-            }}>{appUrl()}</div>
-            <button
-              type="button"
-              onClick={copyLink}
-              style={{
-                width: '100%',
-                background: '#fff',
-                color: NAVY,
-                border: 0,
-                borderRadius: '100px',
-                padding: '13px',
-                fontWeight: 700,
-                fontSize: '14px',
-                cursor: 'pointer',
-              }}
-            >{copied ? (fr ? 'Lien copié ✓' : 'Link copied ✓') : (fr ? 'Copier le lien' : 'Copy the link')}</button>
+            }}>{EVENT_SITE_HOST}</div>
             <button
               type="button"
               onClick={onSkip}

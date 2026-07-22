@@ -3,6 +3,12 @@ export const STORAGE_PROFILE_KEY = "p26_profile";
 export const STORAGE_LANGUAGE_KEY = "p26_language";
 export const STORAGE_REMINDERS_KEY = "p26_reminders";
 
+// Site officiel de la convention : il centralise tout et porte le lien vers
+// l'application. Le guide d'installation y renvoie plutôt que de faire manipuler
+// l'adresse de l'application aux participants.
+export const EVENT_SITE_HOST = "dlwm-convention2026.fr";
+export const EVENT_SITE_URL = `https://www.${EVENT_SITE_HOST}`;
+
 // Pays de résidence proposés à l'inscription
 export const COUNTRIES = [
   { code: "FR", fr: "France", en: "France" },
