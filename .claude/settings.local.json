@@ -80,7 +80,11 @@
       "Bash(chmod +x scripts/deploy-app.sh)",
       "Bash(bash -n scripts/deploy-app.sh)",
       "Bash(./scripts/deploy-app.sh)",
-      "Bash(echo \"--- code de sortie attendu 1, obtenu : $? ---\")"
+      "Bash(echo \"--- code de sortie attendu 1, obtenu : $? ---\")",
+      "Bash(curl -s -m 20 https://paris-2026-app.vercel.app/api/health)",
+      "Bash(curl -s -m 20 https://paris-2026-app.vercel.app/api/content)",
+      "Bash(node --test tests/config-secret-leak.test.mjs)",
+      "Bash(sed 's/^/lint warnings: /')"
     ]
   }
 }

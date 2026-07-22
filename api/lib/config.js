@@ -10,9 +10,34 @@ function parseAdminEmails(value) {
   return String(value || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
 }
 
+// La clé « anon » est transmise au navigateur : elle DOIT être publique.
+// Ce contrôle empêche qu'une clé secrète (accès total, contournement de RLS)
+// soit exposée par mégarde via /api/admin/auth-config.
+function assertPublishableKey(key) {
+  if (key.startsWith('sb_secret_')) {
+    fail('SUPABASE_ANON_KEY contient une clé SECRÈTE (sb_secret_…). '
+      + 'Utilisez la clé publiable (sb_publishable_… ou la clé « anon public »). '
+      + 'Révoquez immédiatement la clé secrète exposée dans Supabase.');
+  }
+  // Ancien format : JWT dont le rôle est inscrit dans la charge utile.
+  if (key.startsWith('eyJ')) {
+    try {
+      const payload = JSON.parse(Buffer.from(key.split('.')[1], 'base64').toString('utf8'));
+      if (payload.role && payload.role !== 'anon') {
+        fail(`SUPABASE_ANON_KEY porte le rôle « ${payload.role} » au lieu de « anon ». `
+          + 'Cette clé ne doit jamais être exposée au navigateur.');
+      }
+    } catch (error) {
+      if (String(error.message).startsWith('[CONFIG]')) throw error;
+      // Jeton illisible : on ne bloque pas, la clé sera simplement refusée par Supabase.
+    }
+  }
+  return key;
+}
+
 function parseSupabaseAuth(env) {
   const url = String(env.SUPABASE_URL || '').trim().replace(/\/$/, '');
-  const anonKey = String(env.SUPABASE_ANON_KEY || '').trim();
+  const anonKey = assertPublishableKey(String(env.SUPABASE_ANON_KEY || '').trim());
   if (!url || !anonKey) return null;
   const adminEmails = parseAdminEmails(env.SUPABASE_ADMIN_EMAILS);
   const adminRole = String(env.SUPABASE_ADMIN_ROLE || '').trim();
