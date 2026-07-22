@@ -75,6 +75,7 @@ Puis, dans **Settings ▸ Environment Variables** du projet Vercel :
 | `SUPABASE_SERVICE_ROLE_KEY` | la clé service_role (**secrète**) |
 | `SUPABASE_ANON_KEY` | la clé anon |
 | `SUPABASE_ADMIN_EMAILS` | e-mails des organisateurs, séparés par des virgules |
+| `SUPABASE_ADMIN_ANY_ACCOUNT` | `1` pour accepter **tout compte confirmé** du projet, comme le site (voir ci-dessous) |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | clés push + `mailto:sfdrm.lwm@gmail.com` |
 | `VITE_API_URL` | `same-origin` |
 | `ADMIN_CODE` *(optionnel)* | code de secours, 16 caractères minimum |
@@ -84,6 +85,46 @@ Puis, dans **Settings ▸ Environment Variables** du projet Vercel :
 > Cette valeur est aussi figée dans `vercel.json`, et une page servie depuis un vrai
 > domaine s'y rabat d'elle-même : un oubli ne peut plus produire une application
 > déconnectée.
+
+### Comptes administrateurs partagés avec le site
+
+Le site et l'application utilisent le **même projet Supabase**. Le site laisse
+entrer dans son espace logistique **tout compte Supabase Auth**, sans contrôle de
+rôle. Pour que les mêmes identifiants ouvrent les deux, posez
+`SUPABASE_ADMIN_ANY_ACCOUNT=1`.
+
+> ⛔ **Condition indispensable** : l'inscription libre doit être **fermée** sur
+> Supabase. La clé publiable est publiée dans le JavaScript du site ; tant que
+> `disable_signup` vaut `false`, n'importe quel internaute peut se créer un
+> compte et deviendrait alors administrateur de l'application — accès à tous les
+> inscrits, aux logements, aux photos, et pouvoir de notifier tout le monde.
+>
+> Supabase ▸ **Authentication ▸ Sign In / Providers ▸ Email** ▸ décochez
+> **« Allow new users to sign up »**.
+>
+> L'API le vérifie à chaque connexion : tant que l'inscription reste ouverte, la
+> connexion administrateur est refusée (`503 signup_open`) plutôt que d'ouvrir
+> l'accès à tous. Vérification :
+>
+> ```bash
+> curl -s "$SUPABASE_URL/auth/v1/settings" -H "apikey: $SUPABASE_ANON_KEY" | grep -o '"disable_signup":[a-z]*'
+> ```
+>
+> Attendu : `"disable_signup":true`.
+
+Les comptes se créent alors dans Supabase ▸ **Authentication ▸ Users ▸ Add user**,
+en cochant **Auto Confirm User** (un compte non confirmé est refusé).
+
+### Hébergements : source unique avec le site
+
+L'application ne redemande pas la liste des personnes hébergées : elle lit les
+tables du site (`inscriptions` et `internal_members`) et rapproche chaque
+participant de son inscription — d'abord par téléphone, puis par nom, et
+uniquement si la correspondance est **unique**. « Mon séjour » affiche alors
+l'adresse, la chambre et les dates saisies sur le site, avec la carte.
+
+Une assignation faite depuis `/admin` de l'application **prime** sur celle du
+site : c'est le moyen de corriger une erreur sans toucher au site.
 
 ### ⚠️ Ne pas intervertir les deux clés Supabase
 

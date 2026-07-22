@@ -4,14 +4,13 @@
 import { randomUUID } from 'node:crypto';
 import { supabase, MEDIA_BUCKET, publicMediaUrl } from './supabase.js';
 import { defaultContent, CONTENT_SECTIONS } from './defaults.js';
+import { matchRegistration, housingFromRegistration } from './siteRegistry.js';
 
 const nowIso = () => new Date().toISOString();
 
 // --- Normalisation pour la liaison participant <-> logement ---
-export const normPhone = (p) => String(p || '').replace(/\D/g, '').slice(-9);
-export const normName = (s) => String(s || '')
-  .toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  .replace(/\s+/g, ' ').trim();
+import { normPhone, normName } from './normalize.js';
+export { normPhone, normName };
 
 function must({ error }, ctx) {
   if (error) throw new Error(`[DB] ${ctx}: ${error.message}`);
@@ -273,10 +272,44 @@ export async function deleteHousing(id) {
   await supabase.from('housing').delete().eq('id', id);
 }
 
-export async function myHousing(participantId) {
-  const { data } = await supabase.from('housing').select('*').eq('participant_id', participantId).maybeSingle();
-  if (!data) return null;
-  return { id: data.id, address: data.address, notes: data.notes, updatedAt: data.updated_at };
+// Colonnes d'hébergement communes aux deux tables du site.
+const SITE_HOUSING_COLUMNS = 'id, full_name, phone_code, phone, housing_address, room_number, housing_notes, start_date, end_date';
+
+// Les tables du site ne nous appartiennent pas : si elles changent de forme ou
+// disparaissent, l'application doit continuer de fonctionner sans hébergement
+// plutôt que de tomber en panne.
+async function siteRegistrations() {
+  const tables = ['inscriptions', 'internal_members'];
+  const results = await Promise.all(tables.map(async (table) => {
+    const { data, error } = await supabase.from(table).select(SITE_HOUSING_COLUMNS);
+    if (error) {
+      console.warn(`[SITE] lecture de « ${table} » impossible : ${error.message}`);
+      return [];
+    }
+    return data || [];
+  }));
+  return results.flat();
+}
+
+/** L'inscription du site correspondant à ce participant, ou null. */
+export async function siteRegistrationFor(participant) {
+  return matchRegistration(participant, await siteRegistrations());
+}
+
+/**
+ * Hébergement du participant. L'assignation faite depuis l'administration de
+ * l'application prime : c'est le moyen pour l'organisation de corriger une
+ * erreur. À défaut, on reprend ce qui a été saisi sur le site.
+ */
+export async function myHousing(participant) {
+  const { data } = await supabase.from('housing').select('*').eq('participant_id', participant.id).maybeSingle();
+  if (data) {
+    return {
+      id: data.id, source: 'organisation', address: data.address, room: '',
+      notes: data.notes, startDate: null, endDate: null, updatedAt: data.updated_at,
+    };
+  }
+  return housingFromRegistration(await siteRegistrationFor(participant));
 }
 
 export async function adminParticipants() {

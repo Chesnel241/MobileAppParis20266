@@ -25,7 +25,7 @@ export default function SejourTab({ t, lang, content, housing }) {
       }}>{t('sejour_title')}</div>
 
       {/* Hébergement assigné par l'organisation (personnes prises en charge) */}
-      {housing && housing.address && (
+      {housing && (housing.address || housing.room) && (
         <div style={{
           background: '#fff',
           borderRadius: '18px',
@@ -52,14 +52,33 @@ export default function SejourTab({ t, lang, content, housing }) {
             marginBottom: '10px'
           }}>{t('sejour_housing_title')}</div>
 
-          <div style={{ height: '120px' }}>
-            <MapCard
-              label={t('sejour_housing_title')}
-              address={housing.address}
-              directions
-              linkLabel={t('sejour_housing_directions')}
-            />
-          </div>
+          {housing.address && (
+            <div style={{ height: '120px' }}>
+              <MapCard
+                label={t('sejour_housing_title')}
+                address={housing.address}
+                directions
+                linkLabel={t('sejour_housing_directions')}
+              />
+            </div>
+          )}
+
+          {housing.room && (
+            <div style={{ marginTop: '12px' }}>
+              <div style={{
+                fontSize: '11px',
+                fontWeight: 700,
+                color: 'rgba(18,23,42,0.45)',
+                textTransform: 'uppercase'
+              }}>{t('sejour_housing_room_label')}</div>
+              <div style={{
+                fontSize: '15px',
+                fontWeight: 700,
+                color: '#12172A',
+                marginTop: '3px'
+              }}>{housing.room}</div>
+            </div>
+          )}
 
           {housing.notes && (
             <div style={{ marginTop: '12px' }}>

@@ -89,7 +89,24 @@
       "Bash(unset VITE_API_URL)",
       "Bash(curl -s -X POST https://paris-2026-app.vercel.app/api/admin/login -H 'Content-Type: application/json' -d '{\"accessToken\":\"bidon\"}')",
       "Bash(timeout 60 npx vercel logs paris-2026-app.vercel.app --json)",
-      "Bash(npx vercel *)"
+      "Bash(npx vercel *)",
+      "Bash(echo \"== inscription ==\")",
+      "Bash(curl -s -X POST https://paris-2026-app.vercel.app/api/participants -H 'Content-Type: application/json' -d '{\"firstName\":\"Verification\",\"lastName\":\"TestClaude\",\"phone\":\"+33600000098\",\"country\":\"FR\"}')",
+      "Bash(echo)",
+      "Bash(echo \"== health ==\")",
+      "Bash(curl -s https://paris-2026-app.vercel.app/api/health)",
+      "Bash(grep -iA3 \"error\\\\|CONFIG\")",
+      "Bash(echo \"== APP : health ==\")",
+      "Bash(echo \"== APP : auth-config ==\")",
+      "Bash(curl -s https://paris-2026-app.vercel.app/api/admin/auth-config)",
+      "Bash(curl -s -o /dev/null -w '%{http_code}\\\\n' https://www.dlwm-convention2026.fr)",
+      "Bash(curl -s https://www.dlwm-convention2026.fr)",
+      "Bash(curl -s https://www.dlwm-convention2026.fr/assets/index-C9UzkAMg.js)",
+      "Bash(grep -oE '\\(is_admin|isAdmin|\"admin\"|`admin`|role:[a-zA-Z_\"`]+|user_metadata|app_metadata\\)' /private/tmp/claude-501/-Users-chesnelekoghamacos-paris-2026-app/68d3bf1f-1b22-48b6-bbe2-2b9070d18c44/scratchpad/site.js)",
+      "Bash(curl -s https://uiqfzumvchtwnxqnvcxx.supabase.co/rest/v1/ -H 'apikey: sb_publishable_FU3tFM-LFmzybajIwLBQgQ_rwBACQEb' -H 'Authorization: Bearer sb_publishable_FU3tFM-LFmzybajIwLBQgQ_rwBACQEb')",
+      "Bash(curl -s https://uiqfzumvchtwnxqnvcxx.supabase.co/auth/v1/settings -H 'apikey: sb_publishable_FU3tFM-LFmzybajIwLBQgQ_rwBACQEb')",
+      "Bash(node -e 'let s=\"\";process.stdin.on\\(\"data\",d=>s+=d\\).on\\(\"end\",\\(\\)=>{const j=JSON.parse\\(s\\);console.log\\(JSON.stringify\\({disable_signup:j.disable_signup,mailer_autoconfirm:j.mailer_autoconfirm,external_email:j.external?.email,external_anonymous:j.external?.anonymous},null,2\\)\\)}\\)')",
+      "Bash(node -e 'import\\(\"./api/lib/normalize.js\"\\).then\\(m=>console.log\\(\"normName\\(\\\\\"Éloïse MBEMBA\\\\\"\\) =\",JSON.stringify\\(m.normName\\(\"Éloïse  MBEMBA\"\\)\\),\"| normPhone\\(\\\\\"+33 6 12 34 56 78\\\\\"\\) =\",m.normPhone\\(\"+33 6 12 34 56 78\"\\)\\)\\)')"
     ]
   }
 }

@@ -227,10 +227,18 @@
       document.getElementById('password').value = '';
       showApp();
     } catch (e) {
-      // 403 = compte valide mais non autorisé pour l'administration mobile
-      showLoginError(String(e.message).includes('403')
-        ? "Ce compte n'est pas autorisé à administrer l'application mobile."
-        : 'Connexion impossible. Réessayez.');
+      const msg = String(e.message);
+      // 503 = l'ouverture à tous les comptes est active alors que n'importe qui
+      // peut encore s'inscrire sur Supabase : refus tant que ce n'est pas fermé.
+      if (msg.includes('503')) {
+        showLoginError("Administration verrouillée : l'inscription libre est encore ouverte sur Supabase. "
+          + 'Authentication ▸ Sign In / Providers ▸ Email ▸ désactivez « Allow new users to sign up », puis réessayez.');
+      } else if (msg.includes('403')) {
+        // Compte valide, mais non autorisé pour l'administration mobile.
+        showLoginError("Ce compte n'est pas autorisé à administrer l'application mobile.");
+      } else {
+        showLoginError('Connexion impossible. Réessayez.');
+      }
     } finally { btn.disabled = false; }
   }
 

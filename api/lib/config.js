@@ -18,10 +18,14 @@ function parseSupabaseAuth(env) {
   if (!url || !anonKey) return null;
   const adminEmails = parseAdminEmails(env.SUPABASE_ADMIN_EMAILS);
   const adminRole = String(env.SUPABASE_ADMIN_ROLE || '').trim();
-  if (adminEmails.length === 0 && !adminRole) {
-    fail("SUPABASE_ADMIN_EMAILS et/ou SUPABASE_ADMIN_ROLE requis, sinon tout compte deviendrait admin.");
+  // Ouvrir l'administration à tout compte du projet doit être un choix assumé,
+  // écrit noir sur blanc dans la configuration — jamais un effet de bord.
+  const anyAccount = /^(1|true|oui|yes)$/i.test(String(env.SUPABASE_ADMIN_ANY_ACCOUNT || '').trim());
+  if (adminEmails.length === 0 && !adminRole && !anyAccount) {
+    fail("SUPABASE_ADMIN_EMAILS, SUPABASE_ADMIN_ROLE ou SUPABASE_ADMIN_ANY_ACCOUNT requis, "
+      + "sinon tout compte deviendrait admin sans que personne ne l'ait décidé.");
   }
-  return Object.freeze({ url, anonKey, adminEmails: Object.freeze(adminEmails), adminRole });
+  return Object.freeze({ url, anonKey, adminEmails: Object.freeze(adminEmails), adminRole, anyAccount });
 }
 
 function parseVapid(env) {

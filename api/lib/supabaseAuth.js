@@ -37,20 +37,29 @@ export async function fetchSupabaseUser(accessToken, { url, anonKey, timeoutMs =
 
 /**
  * Autorisation : être authentifié ne suffit pas, il faut être administrateur.
- * Deux mécanismes cumulables, selon la façon dont vos comptes sont structurés :
+ * Trois mécanismes cumulables, selon la façon dont vos comptes sont structurés :
+ *   - tout compte confirmé du projet (SUPABASE_ADMIN_ANY_ACCOUNT), qui aligne
+ *     l'application sur le site de l'événement : là-bas, toute personne
+ *     authentifiée entre dans l'espace logistique ;
  *   - liste d'e-mails autorisés (SUPABASE_ADMIN_EMAILS)
  *   - rôle porté par le compte (SUPABASE_ADMIN_ROLE), cherché dans
  *     app_metadata.role, user_metadata.role, ou les tableaux *.roles
- * Sans aucun des deux configuré, on refuse (fail closed) : sinon n'importe quel
- * compte du projet Supabase deviendrait administrateur de l'application.
+ * Sans aucun des trois configuré, on refuse (fail closed) : l'ouverture à tous
+ * les comptes doit être un choix explicite, jamais la conséquence d'un oubli.
  */
-export function isAuthorizedAdmin(user, { adminEmails = [], adminRole = '' } = {}) {
+export function isAuthorizedAdmin(user, { adminEmails = [], adminRole = '', anyAccount = false } = {}) {
   if (!user) return false;
-  if (adminEmails.length === 0 && !adminRole) return false;
+  if (adminEmails.length === 0 && !adminRole && !anyAccount) return false;
+
+  // Un compte non confirmé n'est pas une identité vérifiée : on l'écarte dans
+  // tous les cas, y compris en mode « tout compte ».
+  const confirmed = Boolean(user.email_confirmed_at || user.confirmed_at || user.phone_confirmed_at);
+
+  if (anyAccount && confirmed) return true;
 
   if (adminEmails.length > 0) {
     const email = String(user.email || '').trim().toLowerCase();
-    if (email && user.email_confirmed_at !== null && adminEmails.includes(email)) return true;
+    if (email && confirmed && adminEmails.includes(email)) return true;
   }
 
   if (adminRole) {
@@ -66,6 +75,39 @@ export function isAuthorizedAdmin(user, { adminEmails = [], adminRole = '' } = {
   }
 
   return false;
+}
+
+// Le mode « tout compte » n'est légitime que si les comptes sont créés par
+// l'organisation. Si l'inscription libre reste ouverte sur le projet Supabase,
+// n'importe qui sur internet peut s'octroyer un compte — et donc l'accès
+// administrateur. On vérifie donc auprès de Supabase, qui fait autorité.
+// Résultat mis en cache : cette réponse ne change qu'au gré d'un réglage manuel.
+let signupCache = { value: null, at: 0 };
+const SIGNUP_CACHE_MS = 5 * 60 * 1000;
+
+export async function signupIsOpen({ url, anonKey, timeoutMs = 5000 } = {}, now = Date.now()) {
+  if (!url || !anonKey) return true; // dans le doute, on considère le risque présent
+  if (signupCache.value !== null && now - signupCache.at < SIGNUP_CACHE_MS) return signupCache.value;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${url}/auth/v1/settings`, { headers: { apikey: anonKey }, signal: controller.signal });
+    if (!res.ok) return true;
+    const settings = await res.json();
+    const open = settings.disable_signup === false;
+    signupCache = { value: open, at: now };
+    return open;
+  } catch {
+    return true; // injoignable → on refuse plutôt que d'ouvrir en grand
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Réinitialise le cache (tests). */
+export function resetSignupCache() {
+  signupCache = { value: null, at: 0 };
 }
 
 /** Étiquette lisible pour la journalisation / l'affichage (jamais le jeton). */

@@ -166,6 +166,7 @@ export const translations = {
     sejour_housing_title: "Mon hébergement",
     sejour_housing_chip: "Pris en charge par l'organisation",
     sejour_housing_directions: "Itinéraire GPS",
+    sejour_housing_room_label: "Chambre",
     sejour_housing_notes_label: "Informations",
 
     // Pellicule
@@ -373,6 +374,7 @@ export const translations = {
     sejour_housing_title: "My accommodation",
     sejour_housing_chip: "Hosted by the organization",
     sejour_housing_directions: "GPS directions",
+    sejour_housing_room_label: "Room",
     sejour_housing_notes_label: "Information",
 
     // Photo wall

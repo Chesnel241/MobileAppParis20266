@@ -7,7 +7,7 @@ import multer from 'multer';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { extname } from 'node:path';
 import { loadConfig } from './lib/config.js';
-import { fetchSupabaseUser, isAuthorizedAdmin, adminLabel } from './lib/supabaseAuth.js';
+import { fetchSupabaseUser, isAuthorizedAdmin, adminLabel, signupIsOpen } from './lib/supabaseAuth.js';
 import { initPush, broadcast } from './lib/push.js';
 import { CONTENT_SECTIONS } from './lib/defaults.js';
 import * as repo from './lib/repo.js';
@@ -116,6 +116,13 @@ app.post('/api/admin/login', asyncHandler(async (req, res) => {
 
   if (supabaseAccessToken) {
     if (!config.supabase) return res.status(400).json({ error: 'supabase_not_configured' });
+    // Ouvrir l'administration à tout compte n'a de sens que si les comptes sont
+    // créés par l'organisation. Tant que l'inscription libre reste ouverte sur
+    // le projet Supabase, n'importe qui pourrait s'octroyer l'accès : on refuse.
+    if (config.supabase.anyAccount && await signupIsOpen(config.supabase)) {
+      console.error('[ADMIN] mode « tout compte » actif alors que l’inscription libre est ouverte sur Supabase.');
+      return res.status(503).json({ error: 'signup_open' });
+    }
     const user = await fetchSupabaseUser(supabaseAccessToken, config.supabase);
     if (!user) return res.status(401).json({ error: 'bad_supabase_token' });
     if (!isAuthorizedAdmin(user, config.supabase)) return res.status(403).json({ error: 'not_an_admin' });
@@ -191,7 +198,7 @@ app.get('/api/participants/me', requireParticipant, (req, res) => {
 });
 
 app.get('/api/participants/me/housing', requireParticipant, asyncHandler(async (req, res) => {
-  res.json(await repo.myHousing(req.participant.id));
+  res.json(await repo.myHousing(req.participant));
 }));
 
 app.delete('/api/participants/me', requireParticipant, asyncHandler(async (req, res) => {
