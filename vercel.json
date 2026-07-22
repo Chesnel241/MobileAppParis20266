@@ -4,6 +4,12 @@
   "outputDirectory": "dist",
   "framework": null,
 
+  "build": {
+    "env": {
+      "VITE_API_URL": "same-origin"
+    }
+  },
+
   "functions": {
     "api/index.js": {
       "maxDuration": 30
