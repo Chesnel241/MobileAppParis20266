@@ -65,7 +65,18 @@
       "Bash(mkdir -p /tmp/p26push/up)",
       "Bash(node push-e2e.mjs)",
       "Bash(npx oxlint *)",
-      "Bash(VITE_BASE_PATH=/app/ npm run build:demo)"
+      "Bash(VITE_BASE_PATH=/app/ npm run build:demo)",
+      "Bash(awk '{print $6}')",
+      "Bash(node -e \"const p=require\\('./package.json'\\);['@supabase/supabase-js','web-push','express','multer','cors'].forEach\\(d=>console.log\\('  ',d,p.dependencies[d]\\)\\)\")",
+      "Bash(node -e \"console.log\\('express:', require\\('./package.json'\\).dependencies.express\\)\")",
+      "Bash(npm view *)",
+      "Bash(node -e \"console.log\\('pglite:', require\\('./package.json'\\).devDependencies['@electric-sql/pglite']\\)\")",
+      "Bash(node --test tests/schema.test.mjs)",
+      "Bash(node --test tests/repo-schema-consistency.test.mjs)",
+      "Bash(awk '{print \"  \",$9,$5}')",
+      "Bash(VITE_API_URL=same-origin npm run build:demo)",
+      "Bash(node --test tests/api.test.mjs)",
+      "Bash(node -e \"console.log\\('test script actuel :', require\\('./package.json'\\).scripts.test\\)\")"
     ]
   }
 }

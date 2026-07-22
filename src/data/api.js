@@ -1,9 +1,15 @@
 // Client de l'API de synchronisation Convention Paris 2026.
-// L'URL du serveur est fournie au build via VITE_API_URL (voir .env).
-// Si elle est absente ou si une requête échoue, l'app bascule en mode local (hors-ligne).
+// L'URL du serveur est fournie au build via VITE_API_URL (voir .env) :
+//   - une URL absolue (https://…) si l'API est sur un autre domaine ;
+//   - « same-origin » quand l'app et l'API sont déployées ensemble (Vercel),
+//     auquel cas les appels sont relatifs et aucun CORS n'est nécessaire.
+// Sans valeur, l'app bascule en mode local (hors-ligne).
 
-export const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
-export const API_ENABLED = Boolean(API_URL);
+const RAW_API_URL = (import.meta.env.VITE_API_URL || '').trim();
+const SAME_ORIGIN = RAW_API_URL === 'same-origin' || RAW_API_URL === '/';
+
+export const API_URL = SAME_ORIGIN ? '' : RAW_API_URL.replace(/\/$/, '');
+export const API_ENABLED = SAME_ORIGIN || Boolean(API_URL);
 
 const TOKENS = { participant: 'p26_srv_token', admin: 'p26_admin_token' };
 

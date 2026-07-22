@@ -1,0 +1,789 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Administration — Convention Paris 2026</title>
+  <style>
+    :root { --navy:#0E1B38; --red:#EA4630; --green:#2FBF8F; --yellow:#F2E94E; --ink:#12172A; --line:rgba(18,23,42,0.12); }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:#F1EFE8; color:var(--ink); }
+    h1,h2,h3 { margin:0; }
+    button { font-family:inherit; cursor:pointer; border:0; border-radius:10px; }
+    input, select, textarea { font-family:inherit; font-size:14px; width:100%; padding:9px 11px; border:1px solid var(--line);
+                              border-radius:9px; background:#fff; color:var(--ink); }
+    textarea { resize:vertical; min-height:60px; }
+    label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:rgba(18,23,42,.5); display:block; margin:0 0 4px; }
+    .hidden { display:none !important; }
+
+    /* Login */
+    #login { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+    #login .card { background:#fff; border-radius:18px; padding:28px; width:100%; max-width:380px; box-shadow:0 10px 40px rgba(14,27,56,.15); }
+    #login h1 { font-size:20px; }
+    #login .kicker { color:var(--red); font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; }
+    .btn-primary { background:var(--navy); color:#fff; font-weight:700; padding:12px; width:100%; }
+    .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
+    .err { color:var(--red); font-size:13px; font-weight:600; margin-top:8px; }
+
+    /* App */
+    header.top { background:var(--navy); color:#fff; padding:14px 20px; display:flex; align-items:center; justify-content:space-between; }
+    header.top .brand { font-weight:800; letter-spacing:.3px; }
+    header.top .brand small { display:block; font-weight:600; opacity:.7; font-size:11px; letter-spacing:1px; }
+    header.top button { background:rgba(255,255,255,.14); color:#fff; padding:7px 12px; font-weight:600; font-size:13px; }
+    .layout { display:flex; min-height:calc(100vh - 52px); }
+    nav.side { width:210px; flex:none; background:#fff; border-right:1px solid var(--line); padding:12px; }
+    nav.side button { display:block; width:100%; text-align:left; background:transparent; color:var(--ink); padding:11px 12px; font-size:14px; font-weight:600; margin-bottom:2px; }
+    nav.side button.active { background:var(--navy); color:#fff; }
+    main.content { flex:1; padding:24px 28px; max-width:820px; }
+    main.content h2 { font-size:22px; margin-bottom:4px; }
+    main.content .desc { color:rgba(18,23,42,.55); font-size:13.5px; margin-bottom:20px; }
+
+    .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:14px; }
+    .row { display:grid; gap:10px 12px; }
+    .row.c2 { grid-template-columns:1fr 1fr; }
+    .row.c3 { grid-template-columns:1fr 1fr 1fr; }
+    .field { margin-bottom:10px; }
+    .item { border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:12px; position:relative; }
+    .item .del { position:absolute; top:10px; right:10px; background:#fbeae7; color:var(--red); font-size:12px; font-weight:700; padding:4px 9px; }
+    .add { background:#eef1f6; color:var(--navy); font-weight:700; padding:10px 14px; }
+    .save-bar { position:sticky; bottom:0; background:#F1EFE8; padding:14px 0; margin-top:8px; }
+    .save-bar button { background:var(--red); color:#fff; font-weight:700; padding:13px 26px; font-size:15px; }
+    .muted { color:rgba(18,23,42,.5); font-size:12px; }
+    .kpis { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+    .kpi { background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px; }
+    .kpi b { font-size:26px; display:block; }
+    .notif-item { border-top:1px solid var(--line); padding:10px 0; font-size:14px; }
+    .notif-item small { color:rgba(18,23,42,.5); }
+
+    #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--navy); color:#fff;
+             padding:12px 20px; border-radius:100px; font-weight:600; font-size:14px; box-shadow:0 8px 30px rgba(0,0,0,.25);
+             opacity:0; transition:opacity .2s; pointer-events:none; z-index:50; }
+    #toast.show { opacity:1; }
+  </style>
+</head>
+<body>
+  <!-- ====== LOGIN ====== -->
+  <div id="login">
+    <div class="card">
+      <div class="kicker">Convention Paris 2026</div>
+      <h1>Espace administrateur</h1>
+
+      <!-- Connexion par compte Supabase (mêmes comptes que dlwm-convention2026.fr) -->
+      <div id="loginSupabase" class="hidden">
+        <p class="muted" style="margin:8px 0 18px">
+          Connectez-vous avec votre compte organisateur du site de la convention.
+        </p>
+        <label for="email">Adresse e-mail</label>
+        <input id="email" type="email" autocomplete="username" placeholder="vous@exemple.fr" />
+        <label for="password" style="margin-top:12px">Mot de passe</label>
+        <input id="password" type="password" autocomplete="current-password" placeholder="Mot de passe" />
+        <button id="loginSupabaseBtn" class="btn-primary" style="margin-top:16px">Se connecter</button>
+      </div>
+
+      <!-- Repli : code administrateur partagé -->
+      <div id="loginCode" class="hidden">
+        <p class="muted" style="margin:8px 0 18px">Organisateurs &amp; pasteurs — entrez le code administrateur.</p>
+        <label for="code">Code administrateur</label>
+        <input id="code" type="password" autocomplete="off" placeholder="Code" />
+        <button id="loginBtn" class="btn-primary" style="margin-top:16px">Se connecter</button>
+      </div>
+
+      <div id="loginErr" class="err hidden"></div>
+
+      <!-- Bascule entre les deux méthodes, affichée seulement si les deux existent -->
+      <div id="loginSwitch" class="hidden" style="margin-top:14px;text-align:center">
+        <button id="loginSwitchBtn" class="ui-link"
+          style="background:none;border:0;color:var(--navy);font-size:13px;font-weight:600;text-decoration:underline;cursor:pointer">
+          Utiliser le code administrateur
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== APP ====== -->
+  <div id="app" class="hidden">
+    <header class="top">
+      <div class="brand">Administration<small>LIFE WORD MISSION FRANCE &amp; DIASPORA</small></div>
+      <button id="logout">Déconnexion</button>
+    </header>
+    <div class="layout">
+      <nav class="side" id="nav"></nav>
+      <main class="content" id="main"></main>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+  const TOKEN_KEY = 'p26_admin_token';
+  let content = null;
+  let currentSection = 'programme';
+
+  // ---------- API ----------
+  const token = () => sessionStorage.getItem(TOKEN_KEY);
+  async function api(path, opts = {}) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (opts.auth) headers.Authorization = 'Bearer ' + token();
+    const res = await fetch(path, { method: opts.method || 'GET', headers, body: opts.body ? JSON.stringify(opts.body) : undefined });
+    if (res.status === 401) { logout(false); throw new Error('unauthorized'); }
+    if (!res.ok) throw new Error('http_' + res.status);
+    const ct = res.headers.get('content-type') || '';
+    return ct.includes('json') ? res.json() : null;
+  }
+
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  // ---------- DOM helper ----------
+  function el(tag, props = {}, children = []) {
+    const n = document.createElement(tag);
+    for (const k in props) {
+      if (k === 'class') n.className = props[k];
+      else if (k.startsWith('on')) n.addEventListener(k.slice(2), props[k]);
+      else if (k === 'value') n.value = props[k];
+      else n.setAttribute(k, props[k]);
+    }
+    (Array.isArray(children) ? children : [children]).forEach(c => {
+      if (c == null) return;
+      n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+    });
+    return n;
+  }
+  // Champ lié : input qui écrit dans obj[key]
+  function bind(obj, key, opts = {}) {
+    const tag = opts.textarea ? 'textarea' : (opts.type === 'select' ? 'select' : 'input');
+    const props = { value: obj[key] != null ? obj[key] : '', oninput: e => { obj[key] = e.target.value; } };
+    if (opts.type && opts.type !== 'select') props.type = opts.type;
+    if (opts.placeholder) props.placeholder = opts.placeholder;
+    const node = el(tag, props);
+    if (opts.type === 'select') {
+      node.addEventListener('change', e => { obj[key] = e.target.value; });
+      (opts.options || []).forEach(o => node.appendChild(el('option', { value: o.value }, o.label)));
+      node.value = obj[key] != null ? obj[key] : '';
+    }
+    return node;
+  }
+  function field(labelText, node) {
+    return el('div', { class: 'field' }, [el('label', {}, labelText), node]);
+  }
+
+  // ---------- LOGIN ----------
+  // Méthodes de connexion disponibles, décidées par le serveur.
+  let authConfig = { codeEnabled: true, supabase: null };
+
+  function showLoginError(message) {
+    const el = document.getElementById('loginErr');
+    el.textContent = message;
+    el.classList.remove('hidden');
+  }
+  function clearLoginError() {
+    document.getElementById('loginErr').classList.add('hidden');
+  }
+
+  async function loadAuthConfig() {
+    try { authConfig = await api('/api/admin/auth-config'); }
+    catch { /* serveur injoignable : on garde le formulaire par code */ }
+
+    const hasSupabase = Boolean(authConfig.supabase);
+    const hasCode = Boolean(authConfig.codeEnabled);
+    // Supabase est proposé en premier quand il est configuré.
+    document.getElementById('loginSupabase').classList.toggle('hidden', !hasSupabase);
+    document.getElementById('loginCode').classList.toggle('hidden', hasSupabase || !hasCode);
+    document.getElementById('loginSwitch').classList.toggle('hidden', !(hasSupabase && hasCode));
+  }
+
+  document.getElementById('loginSwitchBtn').addEventListener('click', () => {
+    const codeShown = !document.getElementById('loginCode').classList.contains('hidden');
+    document.getElementById('loginCode').classList.toggle('hidden', codeShown);
+    document.getElementById('loginSupabase').classList.toggle('hidden', !codeShown);
+    document.getElementById('loginSwitchBtn').textContent = codeShown
+      ? 'Utiliser le code administrateur'
+      : 'Utiliser mon compte organisateur';
+    clearLoginError();
+  });
+
+  // Ouvre une session locale à partir d'un jeton Supabase validé par le serveur.
+  async function doSupabaseLogin() {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    if (!email || !password) return;
+    const btn = document.getElementById('loginSupabaseBtn');
+    btn.disabled = true;
+    clearLoginError();
+    try {
+      const res = await fetch(`${authConfig.supabase.url}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: authConfig.supabase.anonKey },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!res.ok) { showLoginError('E-mail ou mot de passe incorrect.'); return; }
+      const { access_token: accessToken } = await res.json();
+
+      const r = await api('/api/admin/login', { method: 'POST', body: { supabaseAccessToken: accessToken } });
+      sessionStorage.setItem(TOKEN_KEY, r.token);
+      document.getElementById('password').value = '';
+      showApp();
+    } catch (e) {
+      // 403 = compte valide mais non autorisé pour l'administration mobile
+      showLoginError(String(e.message).includes('403')
+        ? "Ce compte n'est pas autorisé à administrer l'application mobile."
+        : 'Connexion impossible. Réessayez.');
+    } finally { btn.disabled = false; }
+  }
+
+  async function doLogin() {
+    const code = document.getElementById('code').value.trim();
+    if (!code) return;
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true;
+    clearLoginError();
+    try {
+      const r = await api('/api/admin/login', { method: 'POST', body: { code } });
+      sessionStorage.setItem(TOKEN_KEY, r.token);
+      showApp();
+    } catch (e) {
+      showLoginError('Code incorrect.');
+    } finally { btn.disabled = false; }
+  }
+  async function logout(revoke = true) {
+    const currentToken = token();
+    if (revoke && currentToken) {
+      try {
+        await fetch('/api/admin/logout', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + currentToken },
+        });
+      } catch { /* la fermeture locale reste prioritaire */ }
+    }
+    sessionStorage.removeItem(TOKEN_KEY);
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('login').classList.remove('hidden');
+  }
+
+  document.getElementById('loginBtn').addEventListener('click', doLogin);
+  document.getElementById('code').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  document.getElementById('loginSupabaseBtn').addEventListener('click', doSupabaseLogin);
+  for (const id of ['email', 'password']) {
+    document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') doSupabaseLogin(); });
+  }
+  document.getElementById('logout').addEventListener('click', logout);
+
+  // ---------- APP SHELL ----------
+  const SECTIONS = [
+    ['programme', 'Programme'],
+    ['sejour', 'Séjour'],
+    ['logements', 'Logements'],
+    ['paris', 'Découvrir Paris'],
+    ['audios', 'Enseignements'],
+    ['pellicule', 'Pellicule'],
+    ['about', 'À propos'],
+    ['notifications', 'Notifications'],
+    ['stats', 'Statistiques'],
+  ];
+
+  async function showApp() {
+    document.getElementById('login').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    content = await api('/api/content');
+    renderNav();
+    renderSection(currentSection);
+  }
+
+  function renderNav() {
+    const nav = document.getElementById('nav');
+    nav.innerHTML = '';
+    SECTIONS.forEach(([id, label]) => {
+      nav.appendChild(el('button', {
+        class: id === currentSection ? 'active' : '',
+        onclick: () => { currentSection = id; renderNav(); renderSection(id); }
+      }, label));
+    });
+  }
+
+  function header(title, desc) {
+    return [el('h2', {}, title), el('div', { class: 'desc' }, desc)];
+  }
+  function saveBar(onSave) {
+    return el('div', { class: 'save-bar' }, [el('button', { onclick: onSave }, 'Enregistrer les modifications')]);
+  }
+  async function saveSection(section, data) {
+    try { await api('/api/admin/content/' + section, { method: 'PUT', auth: true, body: data }); toast('Enregistré ✓'); }
+    catch (e) { toast('Erreur : ' + e.message); }
+  }
+
+  function renderSection(id) {
+    const m = document.getElementById('main');
+    m.innerHTML = '';
+    ({ programme: secProgramme, sejour: secSejour, logements: secLogements, paris: secParis,
+       audios: secAudios, pellicule: secPellicule, about: secAbout,
+       notifications: secNotifs, stats: secStats })[id](m);
+  }
+
+  // Téléversement d'un fichier média (image ou audio) → URL /media/xxx
+  async function uploadMedia(file, kind) {
+    const form = new FormData();
+    form.append('kind', kind);
+    form.append('file', file);
+    const res = await fetch('/api/admin/media', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token() },
+      body: form,
+    });
+    if (!res.ok) throw new Error('upload_' + res.status);
+    return (await res.json()).url;
+  }
+
+  // Bouton d'upload : input file caché + callback(url)
+  function uploadButton(labelText, kind, accept, onDone) {
+    const input = el('input', { type: 'file', accept, style: 'display:none' });
+    input.addEventListener('change', async () => {
+      const f = input.files && input.files[0];
+      if (!f) return;
+      btn.textContent = 'Envoi…';
+      try { onDone(await uploadMedia(f, kind)); toast('Fichier téléversé ✓'); }
+      catch (e) { toast('Échec du téléversement'); }
+      btn.textContent = labelText;
+      input.value = '';
+    });
+    const btn = el('button', { class: 'add', onclick: () => input.click() }, labelText);
+    return el('div', {}, [btn, input]);
+  }
+
+  // ---------- PROGRAMME ----------
+  function secProgramme(m) {
+    header('Programme', 'Jours, sessions et compte à rebours. Les horaires alimentent l’app et la « prochaine session ».')
+      .forEach(n => m.appendChild(n));
+
+    // Compte à rebours
+    const toParisInput = value => String(value || '').slice(0, 16);
+    const withParisOffset = value => value ? value + '+02:00' : '';
+    const cd = { v: content.countdownTargetISO };
+    const cardCd = el('div', { class: 'card' }, [
+      field('Début de l’événement (compte à rebours)',
+        el('input', { type: 'datetime-local', value: toParisInput(content.countdownTargetISO), oninput: e => { cd.v = withParisOffset(e.target.value); } }))
+    ]);
+    m.appendChild(el('h3', { style: 'margin:6px 0 8px' }, 'Compte à rebours'));
+    m.appendChild(cardCd);
+
+    // Jours
+    m.appendChild(el('h3', { style: 'margin:16px 0 8px' }, 'Jours'));
+    const daysWrap = el('div', {});
+    const renderDays = () => {
+      daysWrap.innerHTML = '';
+      content.days.forEach((d, i) => {
+        daysWrap.appendChild(el('div', { class: 'item' }, [
+          el('button', { class: 'del', onclick: () => { content.days.splice(i, 1); renderDays(); } }, 'Supprimer'),
+          el('div', { class: 'row c2' }, [
+            field('Libellé court FR', bind(d, 'dFr')), field('Libellé court EN', bind(d, 'dEn')),
+            field('Libellé complet FR', bind(d, 'fullFr')), field('Libellé complet EN', bind(d, 'fullEn')),
+          ]),
+          el('div', { class: 'row c2' }, [
+            field('Identifiant (ex. d1)', bind(d, 'id')),
+            field('Phase', bind(d, 'phase', { type: 'select', options: [
+              { value: 'convention', label: 'Convention' }, { value: 'formation', label: 'Formation' }] })),
+          ]),
+        ]));
+      });
+    };
+    renderDays();
+    m.appendChild(daysWrap);
+    m.appendChild(el('button', { class: 'add', onclick: () => {
+      content.days.push({ id: 'd' + (content.days.length + 1), dFr: '', dEn: '', fullFr: '', fullEn: '', phase: 'convention' });
+      renderDays();
+    } }, '+ Ajouter un jour'));
+
+    // Sessions
+    m.appendChild(el('h3', { style: 'margin:20px 0 8px' }, 'Sessions'));
+    const sessWrap = el('div', {});
+    const dayOptions = () => content.days.map(d => ({ value: d.id, label: d.dFr || d.id }));
+    const renderSessions = () => {
+      sessWrap.innerHTML = '';
+      content.sessions.forEach((s, i) => {
+        sessWrap.appendChild(el('div', { class: 'item' }, [
+          el('button', { class: 'del', onclick: () => { content.sessions.splice(i, 1); renderSessions(); } }, 'Supprimer'),
+          el('div', { class: 'row c2' }, [
+            field('Jour', bind(s, 'dayId', { type: 'select', options: dayOptions() })),
+            field('Catégorie (tag)', bind(s, 'tag')),
+            field('Début (heure de Paris)', el('input', { type: 'datetime-local', value: toParisInput(s.startISO), oninput: e => { s.startISO = withParisOffset(e.target.value); } })),
+            field('Fin (heure de Paris)', el('input', { type: 'datetime-local', value: toParisInput(s.endISO), oninput: e => { s.endISO = withParisOffset(e.target.value); } })),
+          ]),
+          el('div', { class: 'row c2' }, [
+            field('Titre FR', bind(s, 'tFr')), field('Titre EN', bind(s, 'tEn')),
+            field('Intervenant FR', bind(s, 'spFr')), field('Intervenant EN', bind(s, 'spEn')),
+            field('Lieu FR', bind(s, 'locFr')), field('Lieu EN', bind(s, 'locEn')),
+          ]),
+        ]));
+      });
+    };
+    renderSessions();
+    m.appendChild(sessWrap);
+    m.appendChild(el('button', { class: 'add', onclick: () => {
+      content.sessions.push({ id: 's' + Date.now(), dayId: (content.days[0] && content.days[0].id) || 'd1', startISO: content.countdownTargetISO,
+        endISO: content.countdownTargetISO, tFr: '', tEn: '', spFr: '', spEn: '', locFr: '', locEn: '', tag: '' });
+      renderSessions();
+    } }, '+ Ajouter une session'));
+
+    m.appendChild(saveBar(async () => {
+      await saveSection('countdownTargetISO', cd.v);
+      await saveSection('days', content.days);
+      await saveSection('sessions', content.sessions);
+    }));
+  }
+
+  // ---------- SÉJOUR ----------
+  function secSejour(m) {
+    header('Séjour', 'Hôtel, informations pratiques et lieux de rassemblement.').forEach(n => m.appendChild(n));
+    const s = content.sejour;
+    const photoPreview = el('img', {
+      src: s.hotelPhotoUrl || '',
+      style: 'max-width:220px;border-radius:10px;margin-top:10px;' + (s.hotelPhotoUrl ? '' : 'display:none')
+    });
+    m.appendChild(el('div', { class: 'card' }, [
+      el('div', { class: 'row c2' }, [
+        field('Nom de l’hôtel', bind(s, 'hotelName')),
+        field('Recherche carte (Google Maps)', bind(s, 'hotelMapQuery')),
+        field('Chambre', bind(s, 'room')),
+        field('Arrivée', bind(s, 'checkin')),
+        field('Départ', bind(s, 'checkout')),
+      ]),
+      el('div', { style: 'margin-top:10px' }, [
+        el('label', {}, 'Photo de l’hôtel'),
+        uploadButton('📷 Téléverser une photo', 'image', 'image/*', (url) => {
+          s.hotelPhotoUrl = url;
+          photoPreview.src = url;
+          photoPreview.style.display = 'block';
+        }),
+        photoPreview,
+      ]),
+    ]));
+    m.appendChild(el('h3', { style: 'margin:14px 0 8px' }, 'Informations pratiques'));
+    const p = s.practical;
+    const practicalRow = (key, label) => el('div', { class: 'row c2' }, [
+      field(label + ' (FR)', bind(p[key], 'fr')), field(label + ' (EN)', bind(p[key], 'en')),
+    ]);
+    m.appendChild(el('div', { class: 'card' }, [
+      practicalRow('wifi', 'WiFi'), practicalRow('breakfast', 'Petit-déjeuner'),
+      practicalRow('shuttle', 'Navette'), practicalRow('reception', 'Réception'),
+    ]));
+    m.appendChild(el('h3', { style: 'margin:14px 0 8px' }, 'Lieux de rassemblement'));
+    const venue = (v, title) => el('div', { class: 'card' }, [
+      el('div', { class: 'muted', style: 'margin-bottom:8px;font-weight:700' }, title),
+      el('div', { class: 'row c2' }, [
+        field('Nom FR', bind(v, 'nameFr')), field('Nom EN', bind(v, 'nameEn')),
+        field('Adresse FR', bind(v, 'addressFr')), field('Adresse EN', bind(v, 'addressEn')),
+        field('Recherche carte', bind(v, 'mapQuery')),
+      ]),
+    ]);
+    m.appendChild(venue(s.venues.novotel, 'Lieu 1 (hôtel / convention)'));
+    m.appendChild(venue(s.venues.creteil, 'Lieu 2 (formation)'));
+    m.appendChild(saveBar(() => saveSection('sejour', s)));
+  }
+
+  // ---------- PARIS ----------
+  function secParis(m) {
+    header('Découvrir Paris', 'Transports et sites touristiques.').forEach(n => m.appendChild(n));
+    const p = content.paris;
+    m.appendChild(el('h3', { style: 'margin:6px 0 8px' }, 'Transports'));
+    const tRow = (key, label) => el('div', { class: 'row c2' }, [
+      field(label + ' (FR)', bind(p.transport[key], 'fr')), field(label + ' (EN)', bind(p.transport[key], 'en')),
+    ]);
+    m.appendChild(el('div', { class: 'card' }, [tRow('line1', 'Ligne 1'), tRow('line2', 'Ligne 2'), tRow('line3', 'Ligne 3')]));
+
+    m.appendChild(el('h3', { style: 'margin:14px 0 8px' }, 'Sites touristiques'));
+    const wrap = el('div', {});
+    const render = () => {
+      wrap.innerHTML = '';
+      p.landmarks.forEach((l, i) => {
+        wrap.appendChild(el('div', { class: 'item' }, [
+          el('button', { class: 'del', onclick: () => { p.landmarks.splice(i, 1); render(); } }, 'Supprimer'),
+          el('div', { class: 'row c2' }, [
+            field('Nom FR', bind(l, 'nameFr')), field('Nom EN', bind(l, 'nameEn')),
+            field('Description FR', bind(l, 'descFr')), field('Description EN', bind(l, 'descEn')),
+            field('Recherche carte', bind(l, 'mapQuery')),
+          ]),
+        ]));
+      });
+    };
+    render(); m.appendChild(wrap);
+    m.appendChild(el('button', { class: 'add', onclick: () => {
+      p.landmarks.push({ id: 'l' + Date.now(), nameFr: '', nameEn: '', descFr: '', descEn: '', mapQuery: '' }); render();
+    } }, '+ Ajouter un site'));
+    m.appendChild(saveBar(() => saveSection('paris', p)));
+  }
+
+  // ---------- AUDIOS ----------
+  function secAudios(m) {
+    header('Enseignements', 'Enseignements audio : titre, durée et fichier à écouter dans l’app.')
+      .forEach(n => m.appendChild(n));
+    const wrap = el('div', {});
+    const render = () => {
+      wrap.innerHTML = '';
+      content.audios.forEach((a, i) => {
+        const status = el('span', { class: 'muted', style: 'margin-left:10px' },
+          a.url ? '🎧 Fichier en ligne' : 'Aucun fichier');
+        wrap.appendChild(el('div', { class: 'item' }, [
+          el('button', { class: 'del', onclick: () => { content.audios.splice(i, 1); render(); } }, 'Supprimer'),
+          el('div', { class: 'row c2' }, [
+            field('Titre FR', bind(a, 'titleFr')), field('Titre EN', bind(a, 'titleEn')),
+            field('Durée (ex. 45:30)', bind(a, 'duration')),
+          ]),
+          el('div', { style: 'display:flex;align-items:center;margin-top:6px' }, [
+            uploadButton('🎵 Téléverser le fichier audio', 'audio', 'audio/*', (url) => {
+              a.url = url;
+              status.textContent = '🎧 Fichier en ligne';
+            }),
+            status,
+          ]),
+        ]));
+      });
+    };
+    render(); m.appendChild(wrap);
+    m.appendChild(el('button', { class: 'add', onclick: () => {
+      content.audios.push({ id: 'a' + Date.now(), titleFr: '', titleEn: '', duration: '', url: '' }); render();
+    } }, '+ Ajouter un enseignement'));
+    m.appendChild(saveBar(() => saveSection('audios', content.audios)));
+  }
+
+  // ---------- LOGEMENTS ----------
+  async function secLogements(m) {
+    header('Logements', 'Personnes prises en charge par l’organisation. Importez la liste puis liez chaque ligne manuellement au bon compte participant.')
+      .forEach(n => m.appendChild(n));
+
+    // ---- Import ----
+    const ta = el('textarea', {
+      placeholder: 'Nom;Prénom;Téléphone;Pays;Adresse;Notes — une personne par ligne.\nEx.\nMabiala;Grâce;+242 06 111 22 33;CG;12 rue des Lilas, 94220 Charenton;Chambre chez la famille Diallo',
+      style: 'min-height:110px'
+    });
+    const fileInput = el('input', { type: 'file', accept: '.csv,text/csv', style: 'display:none' });
+    fileInput.addEventListener('change', () => {
+      const f = fileInput.files && fileInput.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = () => { ta.value = String(reader.result || ''); };
+      reader.readAsText(f);
+      fileInput.value = '';
+    });
+    const parseRows = (text) => {
+      const rows = [];
+      for (const line of text.split(/\r?\n/)) {
+        const l = line.trim();
+        if (!l) continue;
+        const cells = l.split(l.includes(';') ? ';' : ',').map(c => c.trim());
+        // Ignore une éventuelle ligne d'en-tête
+        if (/^(nom|last ?name)$/i.test(cells[0] || '')) continue;
+        rows.push({
+          lastName: cells[0] || '', firstName: cells[1] || '', phone: cells[2] || '',
+          country: cells[3] || '', address: cells[4] || '', notes: cells.slice(5).join(' ') || ''
+        });
+      }
+      return rows;
+    };
+    m.appendChild(el('div', { class: 'card' }, [
+      el('label', {}, 'Importer la liste (coller le texte ou choisir un fichier CSV)'),
+      ta,
+      el('div', { style: 'display:flex;gap:10px;margin-top:10px' }, [
+        el('button', { class: 'add', onclick: () => fileInput.click() }, '📄 Choisir un fichier CSV'),
+        el('button', { class: 'add', style: 'background:var(--red);color:#fff', onclick: async () => {
+          const rows = parseRows(ta.value);
+          if (!rows.length) return toast('Aucune ligne à importer');
+          try {
+            const r = await api('/api/admin/housing/import', { method: 'POST', auth: true, body: { rows } });
+            toast(`${r.created} importé(s). Liaison manuelle requise.`);
+            renderSection('logements');
+          } catch (e) { toast('Erreur : ' + e.message); }
+        } }, 'Importer'),
+        fileInput,
+      ]),
+      el('div', { class: 'muted', style: 'margin-top:8px' },
+        'Format : Nom;Prénom;Téléphone;Pays;Adresse;Notes'),
+    ]));
+
+    // ---- Liste ----
+    const listWrap = el('div', {}, [el('div', { class: 'muted' }, 'Chargement…')]);
+    m.appendChild(el('h3', { style: 'margin:16px 0 8px' }, 'Personnes prises en charge'));
+    m.appendChild(listWrap);
+
+    let housing = [], participants = [];
+    try {
+      [housing, participants] = await Promise.all([
+        api('/api/admin/housing', { auth: true }),
+        api('/api/admin/participants', { auth: true }),
+      ]);
+    } catch (e) {
+      listWrap.innerHTML = '';
+      listWrap.appendChild(el('div', { class: 'err' }, 'Erreur de chargement'));
+      return;
+    }
+
+    listWrap.innerHTML = '';
+    if (!housing.length) listWrap.appendChild(el('div', { class: 'muted' }, 'Aucune personne dans la liste.'));
+
+    housing.forEach((h) => {
+      const chip = h.participant
+        ? el('span', { style: 'background:#E3F7EE;color:#1d7a5c;font-size:11px;font-weight:700;padding:4px 10px;border-radius:100px' },
+            '✓ Lié à ' + h.participant.firstName + ' ' + h.participant.lastName)
+        : el('span', { style: 'background:#FDF6D8;color:#8a6d00;font-size:11px;font-weight:700;padding:4px 10px;border-radius:100px' },
+            'Non lié — en attente de connexion');
+
+      const freeParticipants = participants.filter(p => !p.housed || (h.participant && p.id === h.participant.id));
+      const linkSelect = el('select', {});
+      linkSelect.appendChild(el('option', { value: '' }, '— Lier manuellement à un participant —'));
+      freeParticipants.forEach(p => {
+        const o = el('option', { value: p.id }, `${p.firstName} ${p.lastName} (${p.phone})`);
+        if (h.participant && p.id === h.participant.id) o.selected = true;
+        linkSelect.appendChild(o);
+      });
+
+      listWrap.appendChild(el('div', { class: 'item' }, [
+        el('button', { class: 'del', onclick: async () => {
+          if (!confirm('Supprimer cette personne de la liste des logements ?')) return;
+          await api('/api/admin/housing/' + h.id, { method: 'DELETE', auth: true });
+          renderSection('logements');
+        } }, 'Supprimer'),
+        el('div', { style: 'margin-bottom:10px' }, chip),
+        el('div', { class: 'row c3' }, [
+          field('Nom', bind(h, 'lastName')), field('Prénom', bind(h, 'firstName')), field('Téléphone', bind(h, 'phone')),
+        ]),
+        el('div', { class: 'row c2' }, [
+          field('Pays', bind(h, 'country')),
+          field('Adresse du logement', bind(h, 'address', { placeholder: 'Adresse complète (rue, code postal, ville)' })),
+        ]),
+        field('Notes (chambre, famille d’accueil…)', bind(h, 'notes')),
+        el('div', { style: 'display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px' }, [
+          el('button', { class: 'add', onclick: async () => {
+            try {
+              await api('/api/admin/housing/' + h.id, { method: 'PUT', auth: true, body: h });
+              toast('Enregistré ✓');
+            } catch (e) { toast('Erreur : ' + e.message); }
+          } }, 'Enregistrer'),
+          linkSelect,
+          el('button', { class: 'add', onclick: async () => {
+            const pid = linkSelect.value || null;
+            try {
+              await api('/api/admin/housing/' + h.id + '/link', { method: 'POST', auth: true, body: { participantId: pid } });
+              toast(pid ? 'Lié ✓' : 'Délié ✓');
+              renderSection('logements');
+            } catch (e) { toast(e.message.includes('409') ? 'Ce participant est déjà logé' : 'Erreur'); }
+          } }, 'Appliquer la liaison'),
+          h.participant ? el('button', { class: 'del', style: 'position:static', onclick: async () => {
+            await api('/api/admin/housing/' + h.id + '/link', { method: 'POST', auth: true, body: { participantId: null } });
+            toast('Délié ✓');
+            renderSection('logements');
+          } }, 'Délier') : null,
+        ]),
+      ]));
+    });
+  }
+
+  // ---------- PELLICULE (modération) ----------
+  async function secPellicule(m) {
+    header('Pellicule', 'Les nouvelles photos restent invisibles aux participants tant qu’elles ne sont pas approuvées.')
+      .forEach(n => m.appendChild(n));
+    const grid = el('div', { style: 'display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px' });
+    m.appendChild(grid);
+    try {
+      const rows = await api('/api/admin/photos', { auth: true });
+      if (!rows.length) m.appendChild(el('div', { class: 'muted', style: 'margin-top:8px' }, 'Aucune photo partagée.'));
+      rows.forEach(r => {
+        grid.appendChild(el('div', { class: 'card', style: 'padding:8px;margin:0' }, [
+          el('img', { src: r.url, style: 'width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px' }),
+          el('div', { class: 'muted', style: 'margin:6px 0 4px;font-size:12px' },
+            r.author + ' · ' + new Date(r.createdAt).toLocaleString('fr-FR') + ' · ' + (r.status === 'pending' ? 'En attente' : 'Approuvée')),
+          r.status === 'pending' ? el('button', { class: 'add', style: 'margin-right:8px', onclick: async () => {
+            await api('/api/admin/photos/' + r.id + '/approve', { method: 'POST', auth: true });
+            toast('Photo approuvée ✓');
+            renderSection('pellicule');
+          } }, 'Approuver') : null,
+          el('button', { class: 'del', style: 'position:static', onclick: async () => {
+            if (!confirm('Supprimer cette photo ?')) return;
+            await api('/api/admin/photos/' + r.id, { method: 'DELETE', auth: true });
+            renderSection('pellicule');
+          } }, 'Supprimer'),
+        ]));
+      });
+    } catch (e) { m.appendChild(el('div', { class: 'err' }, 'Erreur de chargement')); }
+  }
+
+  // ---------- ABOUT ----------
+  function secAbout(m) {
+    header('À propos', 'Dates, phases et contact affichés dans l’app.').forEach(n => m.appendChild(n));
+    const a = content.about;
+    m.appendChild(el('div', { class: 'card' }, [
+      el('div', { class: 'row c2' }, [
+        field('Dates FR', bind(a, 'datesFr')), field('Dates EN', bind(a, 'datesEn')),
+        field('Ligne convention FR', bind(a, 'conventionFr')), field('Ligne convention EN', bind(a, 'conventionEn')),
+        field('Ligne formation FR', bind(a, 'formationFr')), field('Ligne formation EN', bind(a, 'formationEn')),
+        field('Téléphone', bind(a, 'phone')), field('Email', bind(a, 'email')),
+      ]),
+    ]));
+    m.appendChild(saveBar(() => saveSection('about', a)));
+  }
+
+  // ---------- NOTIFICATIONS ----------
+  async function secNotifs(m) {
+    header('Notifications', 'Diffusez un message à tous les participants. Il apparaît dans la cloche de l’app.')
+      .forEach(n => m.appendChild(n));
+    const draft = { fr: '', en: '' };
+    m.appendChild(el('div', { class: 'card' }, [
+      field('Message (FR)', el('textarea', { oninput: e => { draft.fr = e.target.value; }, placeholder: 'Ex. La session de 14h est déplacée en salle B.' })),
+      field('Message (EN) — optionnel', el('textarea', { oninput: e => { draft.en = e.target.value; }, placeholder: 'Same message in English (optional)' })),
+      el('button', { class: 'add', style: 'background:var(--red);color:#fff', onclick: async () => {
+        if (!draft.fr.trim()) return toast('Message FR requis');
+        try { await api('/api/admin/notifications', { method: 'POST', auth: true, body: { textFr: draft.fr, textEn: draft.en } });
+          toast('Notification envoyée ✓'); renderSection('notifications'); }
+        catch (e) { toast('Erreur : ' + e.message); }
+      } }, 'Envoyer la notification'),
+    ]));
+    m.appendChild(el('h3', { style: 'margin:14px 0 8px' }, 'Dernières notifications'));
+    const list = el('div', { class: 'card' }, [el('div', { class: 'muted' }, 'Chargement…')]);
+    m.appendChild(list);
+    try {
+      const rows = await api('/api/notifications');
+      list.innerHTML = '';
+      if (!rows.length) list.appendChild(el('div', { class: 'muted' }, 'Aucune notification.'));
+      rows.forEach(r => list.appendChild(el('div', { class: 'notif-item' }, [
+        el('div', {}, r.fr), el('small', {}, new Date(r.createdAt).toLocaleString('fr-FR')),
+      ])));
+    } catch (e) { list.innerHTML = ''; list.appendChild(el('div', { class: 'err' }, 'Erreur de chargement')); }
+  }
+
+  // ---------- STATS ----------
+  async function secStats(m) {
+    header('Statistiques', 'Chiffres en temps réel (inscrits, présence, questions).').forEach(n => m.appendChild(n));
+    const box = el('div', {});
+    m.appendChild(box);
+    try {
+      const s = await api('/api/admin/stats', { auth: true });
+      box.appendChild(el('div', { class: 'kpis' }, [
+        el('div', { class: 'kpi' }, [el('b', {}, String(s.registered)), 'Inscrits']),
+        el('div', { class: 'kpi' }, [el('b', {}, String(s.checkins)), 'Présents']),
+        el('div', { class: 'kpi' }, [el('b', {}, s.attendanceRate + '%'), 'Taux présence']),
+        el('div', { class: 'kpi' }, [el('b', {}, String(s.received)), 'Questions reçues']),
+        el('div', { class: 'kpi' }, [el('b', {}, String(s.handled)), 'Questions traitées']),
+        el('div', { class: 'kpi' }, [el('b', {}, String(s.active)), 'Participants actifs']),
+      ]));
+      box.appendChild(el('h3', { style: 'margin:18px 0 8px' }, 'Répartition par pays'));
+      const card = el('div', { class: 'card' }, []);
+      (s.byCountry || []).forEach(c => {
+        card.appendChild(el('div', { style: 'margin-bottom:10px' }, [
+          el('div', { style: 'display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px' },
+            [el('span', {}, c.country), el('span', { class: 'muted' }, c.pct + '% (' + c.count + ')')]),
+          el('div', { style: 'height:8px;background:rgba(18,23,42,.08);border-radius:4px;overflow:hidden' },
+            [el('div', { style: 'height:100%;background:var(--green);width:' + c.pct + '%' })]),
+        ]));
+      });
+      box.appendChild(card);
+    } catch (e) { box.appendChild(el('div', { class: 'err' }, 'Erreur : ' + e.message)); }
+  }
+
+  // ---------- BOOT ----------
+  // Détermine d'abord les méthodes de connexion offertes par le serveur.
+  loadAuthConfig().then(() => {
+    if (token()) showApp().catch(() => logout());
+  });
+  </script>
+</body>
+</html>
