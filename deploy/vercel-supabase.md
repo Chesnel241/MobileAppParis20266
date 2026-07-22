@@ -37,10 +37,33 @@ node -e "console.log(require('web-push').generateVAPIDKeys())"
 
 ## 3. Déployer sur Vercel (10 min)
 
+> ## ⛔ À LIRE AVANT DE TAPER LA COMMANDE
+>
+> L'application **doit avoir son PROPRE projet Vercel**, séparé du site de l'événement.
+>
+> Si vous liez ce dossier au projet du site (`diaspora-connect-paris`), le déploiement
+> **remplace le site de la convention** par l'application. C'est déjà arrivé une fois :
+> la réparation est le bouton **Instant Rollback** dans Vercel.
+>
+> Vérifiez avant de déployer que le dossier n'est lié à aucun projet :
+> ```bash
+> ls .vercel 2>/dev/null && echo "⚠️ déjà lié : faites  rm -rf .vercel" || echo "OK, non lié"
+> ```
+
 ```bash
 cd ~/paris-2026-app
 npx vercel --prod
 ```
+
+Répondez aux questions ainsi :
+
+| Question du CLI | Réponse |
+|---|---|
+| *Set up and deploy?* | **Y** |
+| *Link to existing project?* | **N** ← **le point critique** |
+| *What's your project's name?* | `paris-2026-app` (un nom **différent** du site) |
+| *In which directory is your code located?* | `./` |
+| *Want to modify these settings?* | **N** (tout est dans `vercel.json`) |
 
 Framework : **Other** (la configuration est déjà dans `vercel.json`).
 
