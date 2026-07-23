@@ -71,15 +71,27 @@ grant execute on function public.is_app_admin() to authenticated;
 -- 3. Les policies
 -- ----------------------------------------------------------------------------
 
+-- Les policies existantes portent des noms que nous ne connaissons pas (celui
+-- que Supabase propose par défaut, par exemple « Enable read access for all
+-- users »). Il ne suffit donc pas d'en supprimer une liste devinée : sous RLS,
+-- les policies s'additionnent, et une seule permissive suffit à tout rouvrir.
+-- On fait table rase, puis on recrée exactement ce qui est voulu.
+
+do $$
+declare p record;
+begin
+  for p in
+    select policyname, tablename from pg_policies
+    where schemaname = 'public' and tablename in ('inscriptions', 'internal_members')
+  loop
+    execute format('drop policy %I on public.%I', p.policyname, p.tablename);
+    raise notice 'policy supprimée : %.%', p.tablename, p.policyname;
+  end loop;
+end $$;
+
 -- --- inscriptions : formulaire public ---------------------------------------
 alter table public.inscriptions enable row level security;
-
-drop policy if exists inscriptions_public_read   on public.inscriptions;
-drop policy if exists inscriptions_public_write  on public.inscriptions;
-drop policy if exists inscriptions_anon_insert   on public.inscriptions;
-drop policy if exists inscriptions_admin_select  on public.inscriptions;
-drop policy if exists inscriptions_admin_update  on public.inscriptions;
-drop policy if exists inscriptions_admin_delete  on public.inscriptions;
+alter table public.inscriptions force row level security;
 
 -- Un visiteur peut déposer son inscription…
 create policy inscriptions_anon_insert on public.inscriptions
@@ -100,10 +112,7 @@ create policy inscriptions_admin_delete on public.inscriptions
 -- --- internal_members : personnes internes ----------------------------------
 -- Aucune raison qu'un anonyme y touche, dans un sens ou dans l'autre.
 alter table public.internal_members enable row level security;
-
-drop policy if exists internal_members_public_read  on public.internal_members;
-drop policy if exists internal_members_public_write on public.internal_members;
-drop policy if exists internal_members_admin_all    on public.internal_members;
+alter table public.internal_members force row level security;
 
 create policy internal_members_admin_all on public.internal_members
   for all to authenticated
@@ -135,26 +144,56 @@ end $$;
 
 
 -- ----------------------------------------------------------------------------
--- 4. OBLIGATOIRE — se déclarer administrateur
+-- 4. Déclarer les administrateurs
 -- ----------------------------------------------------------------------------
--- Remplacez les adresses par celles des organisateurs, puis exécutez.
--- Les comptes doivent déjà exister (Authentication ▸ Users).
+-- Tous les comptes existants de Authentication ▸ Users sont des organisateurs :
+-- ils sont donc tous déclarés administrateurs, sans intervention.
+--
+-- ⚠️ Cette reprise en bloc n'est valable que parce que ces comptes ont été créés
+-- par vous. Une fois l'inscription libre fermée (§6), les comptes suivants
+-- devront être ajoutés un par un — voir la requête en fin de fichier.
 
 insert into public.app_admins (user_id, email, label)
 select u.id, u.email, 'organisation'
 from auth.users u
-where lower(u.email) in (
-  -- 👇 À REMPLACER
-  'exemple@dlwm-convention2026.fr'
-)
+where u.email is not null
 on conflict (user_id) do nothing;
 
 
 -- ----------------------------------------------------------------------------
 -- 5. Vérification
 -- ----------------------------------------------------------------------------
--- Doit renvoyer au moins une ligne. Si le résultat est vide, l'étape 4 n'a pas
--- fonctionné (adresse mal orthographiée, ou compte inexistant) : corrigez-la
--- avant de quitter, sinon l'espace logistique du site n'affichera plus rien.
+-- Doit lister vos organisateurs. Si le résultat est vide, ne quittez pas :
+-- plus personne n'accéderait aux inscriptions. Créez d'abord les comptes dans
+-- Authentication ▸ Users, puis relancez l'étape 4.
 
 select a.email, a.label, a.created_at from public.app_admins a order by a.created_at;
+
+-- Contrôle : plus aucune policy ne doit laisser « anon » lire ces tables.
+-- La seule ligne mentionnant anon doit être l'INSERT du formulaire public.
+select tablename, policyname, cmd, roles::text
+from pg_policies
+where schemaname = 'public' and tablename in ('inscriptions', 'internal_members')
+order by tablename, cmd;
+
+
+-- ----------------------------------------------------------------------------
+-- 6. Ensuite : fermer l'inscription libre
+-- ----------------------------------------------------------------------------
+-- Authentication ▸ Sign In / Providers ▸ Email ▸ décochez
+-- « Allow new users to sign up ».
+--
+-- Sans cela, n'importe qui peut créer un compte Supabase. Il ne serait pas
+-- administrateur (il n'est pas dans app_admins), mais autant fermer la porte.
+--
+-- Pour ajouter un organisateur par la suite, créez son compte dans
+-- Authentication ▸ Users (cochez « Auto Confirm User »), puis :
+--
+--   insert into public.app_admins (user_id, email, label)
+--   select id, email, 'organisation' from auth.users
+--   where lower(email) = 'nouvel.organisateur@exemple.fr'
+--   on conflict (user_id) do nothing;
+--
+-- Pour retirer un accès :
+--
+--   delete from public.app_admins where lower(email) = 'ancien@exemple.fr';

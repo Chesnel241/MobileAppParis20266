@@ -190,7 +190,10 @@ app.post('/api/push/unsubscribe', requireParticipant, asyncHandler(async (req, r
 app.post('/api/participants', asyncHandler(async (req, res) => {
   if (await limited('register', req, res, 30, 3600)) return;
   const participant = validateParticipantInput(req.body);
-  if (await repo.findDuplicateIdentity(participant)) return res.status(409).json({ error: 'duplicate' });
+  // Aucune validation préalable : beaucoup de participants ne sont pas inscrits
+  // sur le site et s'inscriront sur place. Un profil déjà existant ne bloque
+  // donc plus l'entrée — celui qui veut retrouver ses questions passe par
+  // « J'ai déjà un compte » avec le code que lui donne l'organisation.
   const t = token();
   const { id } = await repo.createParticipant({ ...participant, token: t });
   await repo.autoLinkParticipant({ id, first_name: participant.firstName, last_name: participant.lastName, phone: participant.phone });

@@ -74,9 +74,7 @@ export default function OnboardingScreen({ t, lang, onLangFr, onLangEn, onComple
         createdAt: new Date().toISOString()
       });
       if (!result?.ok) {
-        setError(t(result?.reason === 'duplicate'
-          ? 'onboarding_error_duplicate'
-          : 'onboarding_error_network'));
+        setError(t('onboarding_error_network'));
       }
     } catch {
       setError(t('onboarding_error_network'));

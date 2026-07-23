@@ -52,12 +52,6 @@ export async function deleteParticipant(participantId) {
   await supabase.from('participants').delete().eq('id', participantId);
 }
 
-export async function findDuplicateIdentity({ firstName, lastName, phone }) {
-  const rows = await allParticipants();
-  const key = normName(firstName) + '|' + normName(lastName) + '|' + normPhone(phone);
-  return rows.some(p => (normName(p.first_name) + '|' + normName(p.last_name) + '|' + normPhone(p.phone)) === key);
-}
-
 // ---------------- Contenu ----------------
 export async function seedContent() {
   const { data } = await supabase.from('content').select('section');

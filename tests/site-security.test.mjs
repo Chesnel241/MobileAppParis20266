@@ -28,9 +28,22 @@ const AMORCE = `
   $fn$;
 `;
 
-async function appliquer(fois = 1) {
+// Reproduit la situation réelle : le site avait déjà des policies, portant les
+// noms proposés par défaut dans Supabase. Une première version de cette
+// migration ne supprimait qu'une liste de noms devinés ; celles-ci ont survécu
+// et, RLS additionnant les policies permissives, la fuite est restée ouverte.
+const POLICIES_PREEXISTANTES = `
+  alter table public.inscriptions enable row level security;
+  alter table public.internal_members enable row level security;
+  create policy "Enable read access for all users" on public.inscriptions for select using (true);
+  create policy "Enable insert for all users" on public.inscriptions for insert with check (true);
+  create policy "Enable read access for all users" on public.internal_members for select using (true);
+`;
+
+async function appliquer(fois = 1, { avecPoliciesExistantes = true } = {}) {
   const db = new PGlite();
   await db.exec(AMORCE);
+  if (avecPoliciesExistantes) await db.exec(POLICIES_PREEXISTANTES);
   for (let i = 0; i < fois; i++) await db.exec(sql);
   return db;
 }
@@ -73,6 +86,22 @@ test('un anonyme peut s’inscrire mais ne peut rien lire', async () => {
     assert.ok(p, `policy ${cmd} manquante`);
     assert.doesNotMatch(p.roles, /anon/, `${cmd} ne doit jamais être ouvert à anon`);
   }
+  await db.close();
+});
+
+// Le vrai test de non-régression : aucune policy héritée ne doit subsister.
+test('les policies préexistantes de lecture publique sont supprimées', async () => {
+  const db = await appliquer();
+  const { rows } = await db.query(`
+    select tablename, policyname, cmd, roles::text as roles from pg_policies
+    where schemaname = 'public' and tablename in ('inscriptions','internal_members')
+  `);
+  const heritees = rows.filter(r => /Enable (read|insert) access|Enable insert for/.test(r.policyname));
+  assert.equal(heritees.length, 0, 'policies héritées encore présentes : ' + heritees.map(r => r.policyname).join(', '));
+
+  // Aucune lecture ne doit rester ouverte à anon, sur aucune des deux tables.
+  const lecturesAnon = rows.filter(r => r.cmd !== 'INSERT' && /anon/.test(r.roles));
+  assert.equal(lecturesAnon.length, 0, 'lecture anonyme encore possible');
   await db.close();
 });
 

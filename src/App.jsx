@@ -363,8 +363,10 @@ function App() {
     if (API_ENABLED) {
       try {
         await registerParticipant(newProfile);
-      } catch (err) {
-        return { ok: false, reason: err.status === 409 ? 'duplicate' : 'network' };
+      } catch {
+        // Le serveur ne refuse plus une identité déjà connue : seul un incident
+        // réseau ou serveur peut empêcher l'inscription.
+        return { ok: false, reason: 'network' };
       }
     }
     try {

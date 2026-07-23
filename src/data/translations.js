@@ -166,7 +166,6 @@ export const translations = {
     onboarding_code_help: "Demandez-le à l’organisation : elle le retrouve dans l’espace administrateur.",
     onboarding_code_submit: "Retrouver mon compte",
     onboarding_error_code: "Code invalide. Vérifiez-le auprès de l’organisation.",
-    onboarding_error_duplicate: "Ce profil existe déjà. Touchez « J’ai déjà un compte » ci-dessous, ou contactez l’organisation.",
 
     // Hébergement
     sejour_housing_title: "Mon hébergement",
@@ -380,7 +379,6 @@ export const translations = {
     onboarding_code_help: "Ask the organisation: they can find it in the admin area.",
     onboarding_code_submit: "Recover my account",
     onboarding_error_code: "Invalid code. Please check it with the organisation.",
-    onboarding_error_duplicate: "This profile already exists. Tap “I already have an account” below, or contact the organisation.",
 
     // Housing
     sejour_housing_title: "My accommodation",
