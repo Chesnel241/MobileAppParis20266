@@ -142,6 +142,8 @@ export const translations = {
     toast_reminder_removed: "Rappel retiré",
     toast_reminder_failed: "Autorisez les notifications pour activer ce rappel.",
     content_loading: "Chargement des informations de la convention…",
+    programme_empty_day: "Le programme de cette journée sera publié prochainement.",
+    audios_empty: "Les enseignements seront disponibles pendant la convention.",
     content_unavailable: "Les informations vérifiées sont momentanément indisponibles.",
     content_retry: "Réessayer",
 
@@ -355,6 +357,8 @@ export const translations = {
     toast_reminder_removed: "Reminder removed",
     toast_reminder_failed: "Allow notifications to enable this reminder.",
     content_loading: "Loading verified convention information…",
+    programme_empty_day: "The programme for this day will be published soon.",
+    audios_empty: "Teachings will be available during the convention.",
     content_unavailable: "Verified convention information is temporarily unavailable.",
     content_retry: "Try again",
 

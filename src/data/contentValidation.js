@@ -150,6 +150,27 @@ export function validateContent(candidate, { requireCompleteSchedule = true } = 
   return { ok: errors.length === 0, errors };
 }
 
+/** Un enseignement n'est affichable que s'il est complet et pourvu d'un fichier. */
+const audioUsable = (audio) =>
+  ['id', 'titleFr', 'titleEn', 'duration'].every(key => text(audio?.[key], 300)) && mediaPath(audio?.url);
+
+/**
+ * Contenu prêt pour l'application, par opposition à la validation de mise en
+ * production. Un programme encore incomplet — des journées sans session, des
+ * enseignements sans fichier — ne doit pas empêcher l'application de démarrer :
+ * ce serait priver tout le monde du programme du jour à cause d'une journée
+ * lointaine non saisie. Les éléments inutilisables sont simplement écartés ;
+ * seule une structure réellement cassée reste une erreur.
+ */
+export function prepareContent(candidate) {
+  if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
+    return assertValidContent(candidate);
+  }
+  const cleaned = { ...candidate, audios: (candidate.audios || []).filter(audioUsable) };
+  assertValidContent(cleaned, { requireCompleteSchedule: false });
+  return cleaned;
+}
+
 export function assertValidContent(candidate, options) {
   const result = validateContent(candidate, options);
   if (!result.ok) {

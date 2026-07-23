@@ -223,6 +223,14 @@ export default function PlusTab({
   if (submenu === 'audios') {
     return (
       <>
+        {AUDIO_TRACKS.length === 0 && (
+          <div style={{
+            textAlign: 'center',
+            padding: '40px 20px',
+            color: 'rgba(18,23,42,0.4)',
+            fontSize: '13px'
+          }}>{t('audios_empty')}</div>
+        )}
         {AUDIO_TRACKS.map(track => {
           const title = lang === 'fr' ? track.titleFr : track.titleEn;
           const isCurrent = audioCurrent === track.id;

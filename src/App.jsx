@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import './App.css';
 import { STORAGE_PROFILE_KEY, STORAGE_LANGUAGE_KEY, STORAGE_REMINDERS_KEY, PLACE_LABELS, COUNTRIES } from './data/constants';
 import { defaultContent, upcomingSessions } from './data/defaultContent';
-import { assertValidContent } from './data/contentValidation';
+import { prepareContent } from './data/contentValidation';
 import { t as translate } from './data/translations';
 import {
   API_ENABLED,
@@ -215,7 +215,7 @@ function App() {
     if (!API_ENABLED) return;
     fetchContent()
       .then((candidate) => {
-        setContent(assertValidContent(candidate));
+        setContent(prepareContent(candidate));
         setContentStatus('ready');
       })
       .catch(() => setContentStatus('error'));

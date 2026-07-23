@@ -126,7 +126,7 @@ export default function ProgrammeTab({ t, lang, content, selectedDay, setSelecte
             color: 'rgba(18,23,42,0.4)',
             fontSize: '13px'
           }}>
-            Aucune session pour cette journée
+            {t('programme_empty_day')}
           </div>
         )}
       </div>
