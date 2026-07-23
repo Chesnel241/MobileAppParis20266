@@ -113,7 +113,9 @@
       "Bash(curl -s -o /dev/null -w 'HTTP %{http_code} \\(401 attendu\\)\\\\n' https://paris-2026-app.vercel.app/api/participants/me -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
       "Bash(curl -s -I https://uiqfzumvchtwnxqnvcxx.supabase.co/rest/v1/inscriptions?select=id -H 'apikey: sb_publishable_FU3tFM-LFmzybajIwLBQgQ_rwBACQEb' -H 'Authorization: Bearer sb_publishable_FU3tFM-LFmzybajIwLBQgQ_rwBACQEb' -H 'Prefer: count=exact' -H 'Range: 0-0')",
       "Bash(curl -s https://paris-2026-app.vercel.app/api/content)",
-      "Bash(node --input-type=module -e ' *)"
+      "Bash(node --input-type=module -e ' *)",
+      "Bash(node -p \"JSON.stringify\\([...new Set\\(require\\('./src/data/defaultContent.js'\\) && []\\)]\\)\")",
+      "Bash(awk 'NR>=20 && /^  \\\\],$/ {print NR\": \"$0; exit}' src/data/defaultContent.js)"
     ]
   }
 }
