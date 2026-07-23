@@ -120,6 +120,24 @@ export const fetchAdminStats = () =>
 export const fetchContent = () => apiFetch('/api/content');
 export const fetchNotifications = () => apiFetch('/api/notifications');
 
+/**
+ * Récupération d'accès : le participant a déjà un profil (changement de
+ * téléphone, navigateur vidé) et l'organisation lui a communiqué son code.
+ * On vérifie le code auprès du serveur AVANT de le conserver, pour ne jamais
+ * enregistrer un jeton invalide qui laisserait l'application à moitié connectée.
+ */
+export async function recoverAccess(code) {
+  const clean = String(code || '').trim();
+  if (!clean) throw new Error('code_vide');
+  setParticipantToken(clean);
+  try {
+    return await apiFetch('/api/participants/me', { auth: 'participant' });
+  } catch (error) {
+    clearParticipantToken();
+    throw error;
+  }
+}
+
 // ---- Hébergement assigné (personnes prises en charge par l'organisation) ----
 export const fetchMyHousing = () =>
   apiFetch('/api/participants/me/housing', { auth: 'participant' });

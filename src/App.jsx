@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
-import { STORAGE_PROFILE_KEY, STORAGE_LANGUAGE_KEY, STORAGE_REMINDERS_KEY, PLACE_LABELS } from './data/constants';
+import { STORAGE_PROFILE_KEY, STORAGE_LANGUAGE_KEY, STORAGE_REMINDERS_KEY, PLACE_LABELS, COUNTRIES } from './data/constants';
 import { defaultContent, upcomingSessions } from './data/defaultContent';
 import { assertValidContent } from './data/contentValidation';
 import { t as translate } from './data/translations';
@@ -9,6 +9,7 @@ import {
   getParticipantToken,
   clearParticipantToken,
   registerParticipant,
+  recoverAccess,
   fetchMyProfile,
   submitQuestionApi,
   fetchMyQuestions,
@@ -377,6 +378,34 @@ function App() {
     return { ok: true };
   };
 
+  // Récupération d'accès : le participant possède déjà un profil et
+  // l'organisation lui a communiqué son code. On reconstruit le profil local à
+  // partir du serveur, qui fait autorité — il retrouve ainsi ses questions.
+  const recoverWithCode = async (code) => {
+    if (!API_ENABLED) return { ok: false };
+    let me;
+    try {
+      me = await recoverAccess(code);
+    } catch {
+      return { ok: false };
+    }
+    const entry = COUNTRIES.find(c => c.code === me.country);
+    const recovered = {
+      firstName: me.firstName,
+      lastName: me.lastName,
+      phone: me.phone,
+      country: me.country,
+      countryLabel: entry ? entry[lang] : me.country,
+      createdAt: new Date().toISOString(),
+    };
+    try {
+      localStorage.setItem(STORAGE_PROFILE_KEY, JSON.stringify(recovered));
+    } catch { /* stockage indisponible : le profil reste en mémoire */ }
+    setProfile(recovered);
+    fetchMyHousing().then(setHousing).catch(() => {});
+    return { ok: true };
+  };
+
   // Accès admin : exécute l'action demandée, ou ouvre le modal de code
   const performAdminAction = (action) => {
     if (action === 'pastor') setPastorMode(true);
@@ -670,6 +699,7 @@ function App() {
         onLangFr={() => setLang('fr')}
         onLangEn={() => setLang('en')}
         onComplete={completeOnboarding}
+        onRecover={recoverWithCode}
       />
     );
   }

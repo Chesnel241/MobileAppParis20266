@@ -238,6 +238,25 @@ app.post('/api/admin/participants/:id/checkin', requireAdmin, asyncHandler(async
 }));
 app.get('/api/admin/participants', requireAdmin, asyncHandler(async (_req, res) => res.json(await repo.adminParticipants())));
 
+// Un participant qui a changé de téléphone ou vidé son navigateur se heurte au
+// contrôle de doublon : son profil existe, mais plus rien ne le relie à lui.
+// L'organisation lui redonne son code d'accès — il retrouve alors son profil et
+// ses questions, sans rien perdre.
+app.get('/api/admin/participants/:id/access', requireAdmin, asyncHandler(async (req, res) => {
+  const code = await repo.participantAccessCode(req.params.id);
+  if (!code) return res.status(404).json({ error: 'not_found' });
+  console.log(`[ADMIN] code d'accès communiqué pour le participant ${req.params.id}`);
+  res.json({ code });
+}));
+
+// Dernier recours : libérer l'identité pour permettre une nouvelle inscription.
+// Supprime aussi les questions et les photos du participant (RGPD).
+app.delete('/api/admin/participants/:id', requireAdmin, asyncHandler(async (req, res) => {
+  await repo.deleteParticipant(req.params.id);
+  console.log(`[ADMIN] participant ${req.params.id} supprimé`);
+  res.json({ ok: true });
+}));
+
 // ---------- Logements ----------
 app.get('/api/admin/housing', requireAdmin, asyncHandler(async (_req, res) => res.json(await repo.listHousing())));
 app.post('/api/admin/housing/import', requireAdmin, asyncHandler(async (req, res) => {

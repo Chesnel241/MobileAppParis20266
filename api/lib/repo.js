@@ -331,6 +331,16 @@ export async function myHousing(participant) {
   return housingFromRegistration(await siteRegistrationFor(participant));
 }
 
+/**
+ * Code d'accès d'un participant, à lui communiquer quand il a perdu l'accès à
+ * son profil (changement de téléphone, navigateur vidé). C'est son jeton :
+ * il ne transite que vers l'organisation, jamais vers un autre participant.
+ */
+export async function participantAccessCode(participantId) {
+  const { data } = await supabase.from('participants').select('token').eq('id', participantId).maybeSingle();
+  return data ? data.token : null;
+}
+
 export async function adminParticipants() {
   const { data: linkedRows } = await supabase.from('housing').select('participant_id').not('participant_id', 'is', null);
   const linked = new Set((linkedRows || []).map(r => r.participant_id));

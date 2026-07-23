@@ -23,13 +23,29 @@ const labelStyle = {
   margin: '14px 0 5px'
 };
 
-export default function OnboardingScreen({ t, lang, onLangFr, onLangEn, onComplete }) {
+export default function OnboardingScreen({ t, lang, onLangFr, onLangEn, onComplete, onRecover }) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
   const [country, setCountry] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [recovering, setRecovering] = useState(false);
+  const [code, setCode] = useState('');
+
+  const submitCode = async () => {
+    if (submitting || !code.trim()) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      const result = await onRecover(code);
+      if (!result?.ok) setError(t('onboarding_error_code'));
+    } catch {
+      setError(t('onboarding_error_code'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const canSubmit = firstName.trim() && lastName.trim() && phone.trim() && country;
 
@@ -237,6 +253,59 @@ export default function OnboardingScreen({ t, lang, onLangFr, onLangEn, onComple
             width: '100%'
           }}
         >{submitting ? t('onboarding_submitting') : t('onboarding_submit')}</button>
+
+        {/* Récupération d'accès : le profil existe déjà (téléphone changé,
+            navigateur vidé). L'organisation communique le code, le participant
+            retrouve son profil et ses questions au lieu de tout recommencer. */}
+        {!recovering ? (
+          <button
+            type="button"
+            onClick={() => { setRecovering(true); setError(''); }}
+            style={{
+              marginTop: '12px',
+              width: '100%',
+              background: 'transparent',
+              border: 0,
+              color: 'rgba(18,23,42,0.6)',
+              fontFamily: "'Poppins', sans-serif",
+              fontSize: '12.5px',
+              textDecoration: 'underline',
+              cursor: 'pointer'
+            }}
+          >{t('onboarding_have_account')}</button>
+        ) : (
+          <div style={{ marginTop: '14px' }}>
+            <label style={labelStyle} htmlFor="recoveryCode">{t('onboarding_code_label')}</label>
+            <input
+              id="recoveryCode"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder={t('onboarding_code_placeholder')}
+              autoComplete="off"
+              style={inputStyle}
+            />
+            <div style={{ fontSize: '11.5px', color: 'rgba(18,23,42,0.45)', margin: '6px 0 10px' }}>
+              {t('onboarding_code_help')}
+            </div>
+            <button
+              type="button"
+              onClick={submitCode}
+              disabled={!code.trim() || submitting}
+              style={{
+                width: '100%',
+                background: code.trim() && !submitting ? '#0E1B38' : 'rgba(18,23,42,0.15)',
+                color: code.trim() && !submitting ? '#fff' : 'rgba(18,23,42,0.4)',
+                border: 0,
+                fontFamily: "'Poppins', sans-serif",
+                fontSize: '14px',
+                fontWeight: 700,
+                padding: '14px',
+                borderRadius: '100px',
+                cursor: code.trim() && !submitting ? 'pointer' : 'not-allowed'
+              }}
+            >{submitting ? t('onboarding_submitting') : t('onboarding_code_submit')}</button>
+          </div>
+        )}
 
         <div style={{
           marginTop: '14px',

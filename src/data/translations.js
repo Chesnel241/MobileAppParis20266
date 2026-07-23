@@ -160,7 +160,13 @@ export const translations = {
     onboarding_error_required: "Veuillez remplir tous les champs.",
     onboarding_error_phone: "Numéro de téléphone invalide.",
     onboarding_error_network: "Connexion au serveur impossible. Vérifiez votre réseau et réessayez.",
-    onboarding_error_duplicate: "Ce profil existe déjà. Contactez l'organisation pour récupérer votre accès.",
+    onboarding_have_account: "J’ai déjà un compte",
+    onboarding_code_label: "Code d’accès",
+    onboarding_code_placeholder: "Collez le code reçu",
+    onboarding_code_help: "Demandez-le à l’organisation : elle le retrouve dans l’espace administrateur.",
+    onboarding_code_submit: "Retrouver mon compte",
+    onboarding_error_code: "Code invalide. Vérifiez-le auprès de l’organisation.",
+    onboarding_error_duplicate: "Ce profil existe déjà. Touchez « J’ai déjà un compte » ci-dessous, ou contactez l’organisation.",
 
     // Hébergement
     sejour_housing_title: "Mon hébergement",
@@ -368,7 +374,13 @@ export const translations = {
     onboarding_error_required: "Please fill in all fields.",
     onboarding_error_phone: "Invalid phone number.",
     onboarding_error_network: "The server cannot be reached. Check your connection and try again.",
-    onboarding_error_duplicate: "This profile already exists. Contact the organization to recover access.",
+    onboarding_have_account: "I already have an account",
+    onboarding_code_label: "Access code",
+    onboarding_code_placeholder: "Paste the code you received",
+    onboarding_code_help: "Ask the organisation: they can find it in the admin area.",
+    onboarding_code_submit: "Recover my account",
+    onboarding_error_code: "Invalid code. Please check it with the organisation.",
+    onboarding_error_duplicate: "This profile already exists. Tap “I already have an account” below, or contact the organisation.",
 
     // Housing
     sejour_housing_title: "My accommodation",
