@@ -344,29 +344,62 @@ function validateSejour(value) {
   };
 }
 
+// Photo d'un site : facultative. Chemin d'application (/paris/…, /media/…) ou
+// URL HTTPS. On refuse les chemins traversants et les schémas exotiques.
+function sitePhoto(value, field) {
+  const out = optionalString(value, field, 2048);
+  if (!out) return '';
+  if (/^\/[A-Za-z0-9._/-]{1,300}$/.test(out) && !out.includes('..')) return out;
+  try {
+    if (new URL(out).protocol === 'https:') return out;
+  } catch { /* erreur uniforme ci-dessous */ }
+  fail(field, 'invalid_url');
+}
+
 function validateParis(value) {
-  const input = object(value, 'paris', ['transport', 'landmarks']);
+  const input = object(value, 'paris', ['transport', 'categories'], ['landmarks']);
   const transport = object(input.transport, 'paris.transport', ['line1', 'line2', 'line3']);
-  const landmarks = array(input.landmarks, 'paris.landmarks', { max: 100 }).map((entry, index) => {
-    const field = `paris.landmarks[${index}]`;
-    const item = object(entry, field, ['id', 'nameFr', 'nameEn', 'descFr', 'descEn', 'mapQuery']);
+  const categories = array(input.categories, 'paris.categories', { max: 20 }).map((entry, ci) => {
+    const cf = `paris.categories[${ci}]`;
+    const cat = object(entry, cf, ['id', 'titleFr', 'titleEn', 'sites'], ['descFr', 'descEn']);
+    const sites = array(cat.sites, `${cf}.sites`, { max: 40 }).map((sEntry, si) => {
+      const sf = `${cf}.sites[${si}]`;
+      const s = object(sEntry, sf,
+        ['id', 'nameFr', 'nameEn', 'mapQuery'],
+        ['descFr', 'descEn', 'address', 'transitFr', 'transitEn', 'priceFr', 'priceEn', 'photo']);
+      return {
+        id: identifier(s.id, `${sf}.id`),
+        nameFr: string(s.nameFr, `${sf}.nameFr`, { max: 200 }),
+        nameEn: string(s.nameEn, `${sf}.nameEn`, { max: 200 }),
+        descFr: optionalString(s.descFr, `${sf}.descFr`, 600),
+        descEn: optionalString(s.descEn, `${sf}.descEn`, 600),
+        address: optionalString(s.address, `${sf}.address`, 300),
+        transitFr: optionalString(s.transitFr, `${sf}.transitFr`, 300),
+        transitEn: optionalString(s.transitEn, `${sf}.transitEn`, 300),
+        priceFr: optionalString(s.priceFr, `${sf}.priceFr`, 200),
+        priceEn: optionalString(s.priceEn, `${sf}.priceEn`, 200),
+        photo: sitePhoto(s.photo, `${sf}.photo`),
+        mapQuery: string(s.mapQuery, `${sf}.mapQuery`, { max: 300 }),
+      };
+    });
+    uniqueIds(sites, `${cf}.sites`);
     return {
-      id: identifier(item.id, `${field}.id`),
-      nameFr: string(item.nameFr, `${field}.nameFr`, { max: 160 }),
-      nameEn: string(item.nameEn, `${field}.nameEn`, { max: 160 }),
-      descFr: string(item.descFr, `${field}.descFr`, { max: 500 }),
-      descEn: string(item.descEn, `${field}.descEn`, { max: 500 }),
-      mapQuery: string(item.mapQuery, `${field}.mapQuery`, { max: 300 }),
+      id: identifier(cat.id, `${cf}.id`),
+      titleFr: string(cat.titleFr, `${cf}.titleFr`, { max: 120 }),
+      titleEn: string(cat.titleEn, `${cf}.titleEn`, { max: 120 }),
+      descFr: optionalString(cat.descFr, `${cf}.descFr`, 500),
+      descEn: optionalString(cat.descEn, `${cf}.descEn`, 500),
+      sites,
     };
   });
-  uniqueIds(landmarks, 'paris.landmarks');
+  uniqueIds(categories, 'paris.categories');
   return {
     transport: {
       line1: bilingual(transport.line1, 'paris.transport.line1'),
       line2: bilingual(transport.line2, 'paris.transport.line2'),
       line3: bilingual(transport.line3, 'paris.transport.line3'),
     },
-    landmarks,
+    categories,
   };
 }
 

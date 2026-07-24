@@ -113,12 +113,33 @@ export function validateContent(candidate, { requireCompleteSchedule = true } = 
     for (const key of ['line1', 'line2', 'line3']) {
       if (!bilingual(paris.transport?.[key], 500)) fail(`paris.transport.${key}`, 'traductions FR/EN requises');
     }
-    if (!Array.isArray(paris.landmarks) || paris.landmarks.length < 1 || paris.landmarks.length > 30) {
-      fail('paris.landmarks', 'tableau non vide requis');
+    if (!Array.isArray(paris.categories) || paris.categories.length < 1 || paris.categories.length > 20) {
+      fail('paris.categories', 'tableau non vide requis');
     } else {
-      paris.landmarks.forEach((landmark, index) => {
-        for (const key of ['id', 'nameFr', 'nameEn', 'descFr', 'descEn', 'mapQuery']) {
-          if (!text(landmark?.[key], 500)) fail(`paris.landmarks[${index}].${key}`, 'texte requis');
+      paris.categories.forEach((cat, ci) => {
+        const cp = `paris.categories[${ci}]`;
+        for (const key of ['id', 'titleFr', 'titleEn']) {
+          if (!text(cat?.[key], 120)) fail(`${cp}.${key}`, 'texte requis');
+        }
+        for (const key of ['descFr', 'descEn']) {
+          if (!optionalText(cat?.[key], 500)) fail(`${cp}.${key}`, 'texte invalide');
+        }
+        if (!Array.isArray(cat?.sites) || cat.sites.length > 40) {
+          fail(`${cp}.sites`, 'tableau de 0 à 40 sites requis');
+        } else {
+          cat.sites.forEach((s, si) => {
+            const sp = `${cp}.sites[${si}]`;
+            for (const key of ['id', 'nameFr', 'nameEn', 'mapQuery']) {
+              if (!text(s?.[key], 200)) fail(`${sp}.${key}`, 'texte requis');
+            }
+            for (const key of ['descFr', 'descEn', 'address', 'transitFr', 'transitEn', 'priceFr', 'priceEn']) {
+              if (!optionalText(s?.[key], 600)) fail(`${sp}.${key}`, 'texte invalide');
+            }
+            // La photo est facultative : chemin d'application (/…) ou URL HTTPS.
+            if (s?.photo && !(String(s.photo).startsWith('/') || /^https:\/\//i.test(s.photo))) {
+              fail(`${sp}.photo`, 'chemin /… ou URL HTTPS attendu');
+            }
+          });
         }
       });
     }
@@ -155,6 +176,27 @@ const audioUsable = (audio) =>
   ['id', 'titleFr', 'titleEn', 'duration'].every(key => text(audio?.[key], 300)) && mediaPath(audio?.url);
 
 /**
+ * Compatibilité ascendante de la section « Découvrir Paris ». Avant l'intégration
+ * du guide, la base stockait une liste plate « landmarks » ; le nouveau modèle
+ * organise les sites en catégories. Tant que la base n'a pas été mise à jour, on
+ * enveloppe l'ancienne liste dans une catégorie unique pour que l'écran continue
+ * de s'afficher au lieu de tomber en erreur.
+ */
+function normalizeParis(paris) {
+  if (!paris || typeof paris !== 'object' || Array.isArray(paris.categories)) return paris;
+  if (!Array.isArray(paris.landmarks)) return paris;
+  const sites = paris.landmarks.map(l => ({
+    id: l.id, nameFr: l.nameFr, nameEn: l.nameEn, descFr: l.descFr, descEn: l.descEn,
+    address: '', transitFr: '', transitEn: '', priceFr: '', priceEn: '', photo: '',
+    mapQuery: l.mapQuery,
+  }));
+  const categories = sites.length
+    ? [{ id: 'sites', titleFr: 'Sites touristiques', titleEn: 'Sights', descFr: '', descEn: '', sites }]
+    : [];
+  return { ...paris, categories };
+}
+
+/**
  * Contenu prêt pour l'application, par opposition à la validation de mise en
  * production. Un programme encore incomplet — des journées sans session, des
  * enseignements sans fichier — ne doit pas empêcher l'application de démarrer :
@@ -166,7 +208,11 @@ export function prepareContent(candidate) {
   if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
     return assertValidContent(candidate);
   }
-  const cleaned = { ...candidate, audios: (candidate.audios || []).filter(audioUsable) };
+  const cleaned = {
+    ...candidate,
+    audios: (candidate.audios || []).filter(audioUsable),
+    paris: normalizeParis(candidate.paris),
+  };
   assertValidContent(cleaned, { requireCompleteSchedule: false });
   return cleaned;
 }

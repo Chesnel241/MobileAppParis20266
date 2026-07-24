@@ -144,6 +144,7 @@ export const translations = {
     content_loading: "Chargement des informations de la convention…",
     programme_empty_day: "Le programme de cette journée sera publié prochainement.",
     audios_empty: "Les enseignements seront disponibles pendant la convention.",
+    paris_photo_credits: "Photos : Wikimedia Commons (licences CC BY / CC BY-SA / domaine public) — AlSepPhoenix, Benh Lieu Song, Dinkum, Guilhem Vellut, Gzen92, JLPC, Maurice Svay, Moonik, P e z i.",
     content_unavailable: "Les informations vérifiées sont momentanément indisponibles.",
     content_retry: "Réessayer",
 
@@ -359,6 +360,7 @@ export const translations = {
     content_loading: "Loading verified convention information…",
     programme_empty_day: "The programme for this day will be published soon.",
     audios_empty: "Teachings will be available during the convention.",
+    paris_photo_credits: "Photos: Wikimedia Commons (CC BY / CC BY-SA / public domain) — AlSepPhoenix, Benh Lieu Song, Dinkum, Guilhem Vellut, Gzen92, JLPC, Maurice Svay, Moonik, P e z i.",
     content_unavailable: "Verified convention information is temporarily unavailable.",
     content_retry: "Try again",
 

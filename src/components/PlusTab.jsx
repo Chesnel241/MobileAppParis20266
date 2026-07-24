@@ -17,7 +17,7 @@ export default function PlusTab({
   onDeleteAccount,
   onAdminLogout,
 }) {
-  const LANDMARKS = content.paris.landmarks || [];
+  const PARIS_CATEGORIES = content.paris.categories || [];
   const AUDIO_TRACKS = content.audios || [];
   const venueNovotel = content.sejour.venues.novotel;
   const venueCreteil = content.sejour.venues.creteil;
@@ -146,54 +146,106 @@ export default function PlusTab({
               }}>{content.paris.transport.line3[lang]}</div>
             </div>
 
-            {LANDMARKS.map(landmark => {
-              const name = lang === 'fr' ? landmark.nameFr : landmark.nameEn;
-              const desc = lang === 'fr' ? landmark.descFr : landmark.descEn;
-
+            {PARIS_CATEGORIES.map(category => {
+              const catTitle = lang === 'fr' ? category.titleFr : category.titleEn;
+              const catDesc = lang === 'fr' ? category.descFr : category.descEn;
               return (
-                <div key={landmark.id} style={{
-                  background: '#fff',
-                  borderRadius: '18px',
-                  overflow: 'hidden',
-                  border: '1px solid rgba(18,23,42,0.06)',
-                  marginBottom: '14px'
-                }}>
+                <div key={category.id} style={{ marginBottom: '26px' }}>
                   <div style={{
-                    width: '100%',
-                    height: '130px',
-                    background: 'linear-gradient(135deg, #0E1B38 0%, #2FBF8F 100%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#fff',
-                    fontSize: '13px',
-                    fontWeight: 600
-                  }}>
-                    Photo à venir
-                  </div>
-                  <div style={{ padding: '14px' }}>
-                    <div style={{
-                      fontSize: '15px',
-                      fontWeight: 700,
-                      color: '#12172A'
-                    }}>{name}</div>
+                    fontSize: '17px',
+                    fontWeight: 800,
+                    color: '#12172A'
+                  }}>{catTitle}</div>
+                  {catDesc && (
                     <div style={{
                       fontSize: '12.5px',
                       color: 'rgba(18,23,42,0.6)',
-                      marginTop: '4px',
-                      lineHeight: '1.4'
-                    }}>{desc}</div>
-                    <div style={{ marginTop: '12px', height: '100px' }}>
-                      <MapCard
-                        label={name}
-                        address={desc}
-                        mapQuery={landmark.mapQuery}
-                      />
-                    </div>
-                  </div>
+                      marginTop: '3px',
+                      marginBottom: '12px',
+                      lineHeight: '1.45'
+                    }}>{catDesc}</div>
+                  )}
+
+                  {(category.sites || []).map(siteItem => {
+                    const name = lang === 'fr' ? siteItem.nameFr : siteItem.nameEn;
+                    const desc = lang === 'fr' ? siteItem.descFr : siteItem.descEn;
+                    const transit = lang === 'fr' ? siteItem.transitFr : siteItem.transitEn;
+                    const price = lang === 'fr' ? siteItem.priceFr : siteItem.priceEn;
+
+                    return (
+                      <div key={siteItem.id} style={{
+                        background: '#fff',
+                        borderRadius: '18px',
+                        overflow: 'hidden',
+                        border: '1px solid rgba(18,23,42,0.06)',
+                        marginBottom: '14px'
+                      }}>
+                        {siteItem.photo ? (
+                          <img
+                            src={siteItem.photo}
+                            alt={name}
+                            loading="lazy"
+                            style={{ width: '100%', height: '150px', objectFit: 'cover', display: 'block' }}
+                          />
+                        ) : (
+                          <div style={{
+                            width: '100%',
+                            height: '96px',
+                            background: 'linear-gradient(135deg, #0E1B38 0%, #2FBF8F 100%)'
+                          }} />
+                        )}
+                        <div style={{ padding: '14px' }}>
+                          <div style={{ fontSize: '15px', fontWeight: 700, color: '#12172A' }}>{name}</div>
+                          {desc && (
+                            <div style={{
+                              fontSize: '12.5px',
+                              color: 'rgba(18,23,42,0.62)',
+                              marginTop: '5px',
+                              lineHeight: '1.45'
+                            }}>{desc}</div>
+                          )}
+
+                          {(transit || price || siteItem.address) && (
+                            <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              {siteItem.address && (
+                                <div style={{ fontSize: '12px', color: 'rgba(18,23,42,0.7)' }}>
+                                  📍 {siteItem.address}
+                                </div>
+                              )}
+                              {transit && (
+                                <div style={{ fontSize: '12px', color: 'rgba(18,23,42,0.7)' }}>
+                                  🚇 {transit}
+                                </div>
+                              )}
+                              {price && (
+                                <div style={{ fontSize: '12px', color: 'rgba(18,23,42,0.7)' }}>
+                                  🎟️ {price}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          <div style={{ marginTop: '12px', height: '100px' }}>
+                            <MapCard
+                              label={name}
+                              address={siteItem.address || desc}
+                              mapQuery={siteItem.mapQuery}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })}
+
+            <div style={{
+              fontSize: '11px',
+              color: 'rgba(18,23,42,0.4)',
+              lineHeight: '1.5',
+              marginTop: '2px'
+            }}>{t('paris_photo_credits')}</div>
           </>
         )}
 

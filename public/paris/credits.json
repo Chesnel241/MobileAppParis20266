@@ -1,0 +1,93 @@
+{
+  "bercy": {
+    "artist": "JLPC",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Paris_Parc_de_Bercy_tulipes_2009.jpg",
+    "file": "Paris Parc de Bercy tulipes 2009.jpg"
+  },
+  "vincennes": {
+    "artist": "Moonik",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Ch%C3%A2teau_de_Vincennes_001.jpg",
+    "file": "Château de Vincennes 001.jpg"
+  },
+  "parc-floral": {
+    "artist": "Dinkum",
+    "license": "CC0",
+    "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+    "source": "https://commons.wikimedia.org/wiki/File:Fleurs_bicolores_-_Parc_floral.JPG",
+    "file": "Fleurs bicolores - Parc floral.JPG"
+  },
+  "zoo": {
+    "artist": "Maurice Svay from Paris, France",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Parc_Zoologique_de_Paris,_5_April_2014_(8).jpg",
+    "file": "Parc Zoologique de Paris, 5 April 2014 (8).jpg"
+  },
+  "bois-vincennes": {
+    "artist": "Guilhem Vellut from Paris, France",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Lac_Daumesnil_@_Bois_de_Vincennes_@_Paris_(23833563121).jpg",
+    "file": "Lac Daumesnil @ Bois de Vincennes @ Paris (23833563121).jpg"
+  },
+  "aquarium": {
+    "artist": "AlSepPhoenix",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Palais_Porte_Doree_Facade_droite.jpg",
+    "file": "Palais Porte Doree Facade droite.jpg"
+  },
+  "tour-eiffel": {
+    "artist": "Benh LIEU SONG",
+    "license": "Public domain",
+    "licenseUrl": "",
+    "source": "https://commons.wikimedia.org/wiki/File:Tour_Eiffel_Wikimedia_Commons_(cropped).jpg",
+    "file": "Tour Eiffel Wikimedia Commons (cropped).jpg"
+  },
+  "louvre": {
+    "artist": "Gzen92",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Mus%C3%A9e_du_Louvre_et_Pyramide_du_Louvre_(Paris).jpg",
+    "file": "Musée du Louvre et Pyramide du Louvre (Paris).jpg"
+  },
+  "arc-triomphe": {
+    "artist": "Benh LIEU SONG",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Arc_Triomphe.jpg",
+    "file": "Arc Triomphe.jpg"
+  },
+  "notre-dame": {
+    "artist": "P e z i",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Notre-Dame_de_Paris_2013-07-24.jpg",
+    "file": "Notre-Dame de Paris 2013-07-24.jpg"
+  },
+  "galeries-lafayette": {
+    "artist": "Benh LIEU SONG (Flickr)",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Galerie_Lafayette_Haussmann_Dome.jpg",
+    "file": "Galerie Lafayette Haussmann Dome.jpg"
+  },
+  "rue-rivoli": {
+    "artist": "Guilhem Vellut from Paris, France",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Arcades,_Rue_de_Rivoli,_Paris_26_December_2016_001.jpg",
+    "file": "Arcades, Rue de Rivoli, Paris 26 December 2016 001.jpg"
+  },
+  "montmartre": {
+    "artist": "P e z i",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Sacre_Coeur_cor_Jesu-DSC_1455w.jpg",
+    "file": "Sacre Coeur cor Jesu-DSC 1455w.jpg"
+  }
+}

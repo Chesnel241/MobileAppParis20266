@@ -496,33 +496,76 @@
 
   // ---------- PARIS ----------
   function secParis(m) {
-    header('Découvrir Paris', 'Transports et sites touristiques.').forEach(n => m.appendChild(n));
+    header('Découvrir Paris', 'Transports, catégories et sites touristiques (photo, adresse, transport, tarif).').forEach(n => m.appendChild(n));
     const p = content.paris;
+    // Migration douce : une base encore au format « landmarks » est convertie en
+    // catégories, pour que l'organisation reparte du contenu déjà en ligne.
+    if (!Array.isArray(p.categories)) {
+      const sites = (p.landmarks || []).map(l => ({
+        id: l.id, nameFr: l.nameFr, nameEn: l.nameEn, descFr: l.descFr, descEn: l.descEn,
+        address: '', transitFr: '', transitEn: '', priceFr: '', priceEn: '', photo: '', mapQuery: l.mapQuery,
+      }));
+      p.categories = sites.length ? [{ id: 'sites', titleFr: 'Sites touristiques', titleEn: 'Sights', descFr: '', descEn: '', sites }] : [];
+      delete p.landmarks;
+    }
+
     m.appendChild(el('h3', { style: 'margin:6px 0 8px' }, 'Transports'));
     const tRow = (key, label) => el('div', { class: 'row c2' }, [
       field(label + ' (FR)', bind(p.transport[key], 'fr')), field(label + ' (EN)', bind(p.transport[key], 'en')),
     ]);
     m.appendChild(el('div', { class: 'card' }, [tRow('line1', 'Ligne 1'), tRow('line2', 'Ligne 2'), tRow('line3', 'Ligne 3')]));
 
-    m.appendChild(el('h3', { style: 'margin:14px 0 8px' }, 'Sites touristiques'));
+    m.appendChild(el('h3', { style: 'margin:16px 0 8px' }, 'Catégories et sites'));
     const wrap = el('div', {});
+
+    const renderSite = (cat, s, si) => {
+      const photoUrl = el('input', { value: s.photo || '', placeholder: '/paris/… ou /media/… ou https://…',
+        oninput: e => { s.photo = e.target.value; } });
+      const preview = el('img', { src: s.photo || '', alt: '',
+        style: 'width:100%;max-height:120px;object-fit:cover;border-radius:8px;margin-top:6px;' + (s.photo ? '' : 'display:none') });
+      photoUrl.addEventListener('input', () => { preview.src = s.photo || ''; preview.style.display = s.photo ? '' : 'none'; });
+      return el('div', { class: 'item' }, [
+        el('button', { class: 'del', onclick: () => { cat.sites.splice(si, 1); render(); } }, 'Supprimer'),
+        el('div', { class: 'row c2' }, [
+          field('Nom FR', bind(s, 'nameFr')), field('Nom EN', bind(s, 'nameEn')),
+          field('Description FR', bind(s, 'descFr', { textarea: true })), field('Description EN', bind(s, 'descEn', { textarea: true })),
+          field('Adresse', bind(s, 'address')), field('Recherche carte', bind(s, 'mapQuery')),
+          field('Transport FR', bind(s, 'transitFr')), field('Transport EN', bind(s, 'transitEn')),
+          field('Tarif FR', bind(s, 'priceFr')), field('Tarif EN', bind(s, 'priceEn')),
+        ]),
+        field('Photo (URL)', photoUrl),
+        uploadButton('📷 Téléverser une photo', 'photo', 'image/*', (url) => {
+          s.photo = url; photoUrl.value = url; preview.src = url; preview.style.display = '';
+        }),
+        preview,
+      ]);
+    };
+
     const render = () => {
       wrap.innerHTML = '';
-      p.landmarks.forEach((l, i) => {
-        wrap.appendChild(el('div', { class: 'item' }, [
-          el('button', { class: 'del', onclick: () => { p.landmarks.splice(i, 1); render(); } }, 'Supprimer'),
+      p.categories.forEach((cat, ci) => {
+        const sitesWrap = el('div', {});
+        (cat.sites || []).forEach((s, si) => sitesWrap.appendChild(renderSite(cat, s, si)));
+        wrap.appendChild(el('div', { class: 'card', style: 'background:#f7f8fb' }, [
+          el('button', { class: 'del', onclick: () => { p.categories.splice(ci, 1); render(); } }, 'Supprimer la catégorie'),
           el('div', { class: 'row c2' }, [
-            field('Nom FR', bind(l, 'nameFr')), field('Nom EN', bind(l, 'nameEn')),
-            field('Description FR', bind(l, 'descFr')), field('Description EN', bind(l, 'descEn')),
-            field('Recherche carte', bind(l, 'mapQuery')),
+            field('Titre catégorie FR', bind(cat, 'titleFr')), field('Titre catégorie EN', bind(cat, 'titleEn')),
+            field('Intro FR', bind(cat, 'descFr')), field('Intro EN', bind(cat, 'descEn')),
           ]),
+          el('div', { style: 'font-weight:700;font-size:13px;margin:10px 0 6px' }, 'Sites'),
+          sitesWrap,
+          el('button', { class: 'add', onclick: () => {
+            cat.sites = cat.sites || [];
+            cat.sites.push({ id: 's' + Date.now(), nameFr: '', nameEn: '', descFr: '', descEn: '', address: '', transitFr: '', transitEn: '', priceFr: '', priceEn: '', photo: '', mapQuery: '' });
+            render();
+          } }, '+ Ajouter un site'),
         ]));
       });
     };
     render(); m.appendChild(wrap);
     m.appendChild(el('button', { class: 'add', onclick: () => {
-      p.landmarks.push({ id: 'l' + Date.now(), nameFr: '', nameEn: '', descFr: '', descEn: '', mapQuery: '' }); render();
-    } }, '+ Ajouter un site'));
+      p.categories.push({ id: 'c' + Date.now(), titleFr: '', titleEn: '', descFr: '', descEn: '', sites: [] }); render();
+    } }, '+ Ajouter une catégorie'));
     m.appendChild(saveBar(() => saveSection('paris', p)));
   }
 
