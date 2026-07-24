@@ -76,23 +76,42 @@ export async function setContentSection(section, value) {
 }
 
 // ---------------- Notifications ----------------
+// Les colonnes d'annonce (important, title_*) sont ajoutées par une migration.
+// Tant qu'elle n'a pas été exécutée, l'application doit continuer de fonctionner :
+// on retombe alors sur une notification simple, sans jamais planter la cloche.
+const missingAnnouncementColumns = (error) =>
+  error && /column .*(important|title_fr|title_en)/i.test(error.message || '');
+
 export async function createNotification({ fr, en, important = false, titleFr = '', titleEn = '' }) {
   const id = randomUUID();
-  const res = await supabase.from('notifications').insert({
+  const full = await supabase.from('notifications').insert({
     id, text_fr: fr, text_en: en,
     important, title_fr: titleFr || null, title_en: titleEn || null,
     created_at: nowIso(),
   });
-  must(res, 'createNotification');
+  if (full.error && missingAnnouncementColumns(full.error)) {
+    const base = await supabase.from('notifications').insert({ id, text_fr: fr, text_en: en, created_at: nowIso() });
+    must(base, 'createNotification');
+    return { id, fr, en, important: false, titleFr: '', titleEn: '' };
+  }
+  must(full, 'createNotification');
   return { id, fr, en, important, titleFr, titleEn };
 }
 
 export async function recentNotifications(limit = 50) {
-  const { data, error } = await supabase.from('notifications')
+  const rich = await supabase.from('notifications')
     .select('id, text_fr, text_en, important, title_fr, title_en, created_at')
     .order('created_at', { ascending: false }).limit(limit);
-  if (error) throw new Error(`[DB] recentNotifications: ${error.message}`);
-  return (data || []).map(n => ({
+  if (rich.error && missingAnnouncementColumns(rich.error)) {
+    const base = await supabase.from('notifications')
+      .select('id, text_fr, text_en, created_at').order('created_at', { ascending: false }).limit(limit);
+    if (base.error) throw new Error(`[DB] recentNotifications: ${base.error.message}`);
+    return (base.data || []).map(n => ({
+      id: n.id, fr: n.text_fr, en: n.text_en, important: false, titleFr: '', titleEn: '', createdAt: n.created_at,
+    }));
+  }
+  if (rich.error) throw new Error(`[DB] recentNotifications: ${rich.error.message}`);
+  return (rich.data || []).map(n => ({
     id: n.id, fr: n.text_fr, en: n.text_en,
     important: Boolean(n.important), titleFr: n.title_fr || '', titleEn: n.title_en || '',
     createdAt: n.created_at,
