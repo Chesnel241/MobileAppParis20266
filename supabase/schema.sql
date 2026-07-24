@@ -55,8 +55,17 @@ create table if not exists notifications (
   id          uuid primary key default gen_random_uuid(),
   text_fr     text not null,
   text_en     text not null,
+  -- Une annonce « importante » s'affiche en plein écran dans l'application,
+  -- pour atteindre aussi les participants sans notifications push activées.
+  important   boolean not null default false,
+  title_fr    text,
+  title_en    text,
   created_at  timestamptz not null default now()
 );
+-- Ré-exécution sur une base déjà créée : ajoute les colonnes si absentes.
+alter table notifications add column if not exists important boolean not null default false;
+alter table notifications add column if not exists title_fr text;
+alter table notifications add column if not exists title_en text;
 
 create table if not exists housing (
   id             uuid primary key default gen_random_uuid(),

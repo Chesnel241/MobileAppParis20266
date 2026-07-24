@@ -51,6 +51,7 @@ import SejourTab from './components/SejourTab';
 import QuestionTab from './components/QuestionTab';
 import PlusTab from './components/PlusTab';
 import NotificationCenter from './components/NotificationCenter';
+import AnnouncementModal from './components/AnnouncementModal';
 import SessionModal from './components/SessionModal';
 import MiniPlayer from './components/MiniPlayer';
 import Toast from './components/Toast';
@@ -132,6 +133,17 @@ function App() {
   const [notifSeenAt, setNotifSeenAt] = useState(
     () => localStorage.getItem('p26_notif_seen') || ''
   );
+
+  // Annonce importante affichée en plein écran (canal garanti, indépendant du push).
+  // On mémorise les annonces déjà lues pour ne pas les réafficher.
+  const [pendingAnnouncement, setPendingAnnouncement] = useState(null);
+  const acknowledgeAnnouncement = (id) => {
+    try {
+      const seen = JSON.parse(localStorage.getItem('p26_ann_ack') || '[]');
+      if (!seen.includes(id)) localStorage.setItem('p26_ann_ack', JSON.stringify([...seen, id].slice(-200)));
+    } catch { /* stockage indisponible : l'annonce pourra réapparaître, sans gravité */ }
+    setPendingAnnouncement(null);
+  };
 
   // Programme state
   const [selectedDay, setSelectedDay] = useState('d1');
@@ -248,6 +260,17 @@ function App() {
         const unread = rows.filter(n => !notifSeenAt || n.createdAt > notifSeenAt).length;
         setHasNotifBadge(unread > 0);
         setNotifBadgeText(unread > 9 ? '9+' : (unread ? String(unread) : ''));
+
+        // Annonce importante non encore lue : on affiche la plus récente, à
+        // condition qu'elle soit fraîche (moins de 24 h), pour ne pas surgir
+        // chez un nouveau venu à cause d'un avis de la veille.
+        let acked = [];
+        try { acked = JSON.parse(localStorage.getItem('p26_ann_ack') || '[]'); } catch { /* ignore */ }
+        const fresh = Date.now() - 24 * 3600 * 1000;
+        const toShow = rows.find(n =>
+          n.important && !acked.includes(n.id) && new Date(n.createdAt).getTime() >= fresh
+        );
+        setPendingAnnouncement(prev => (prev && prev.id === toShow?.id ? prev : (toShow || null)));
       })
       .catch(() => {});
     load();
@@ -878,6 +901,13 @@ function App() {
           onEnablePush={onEnablePush}
         />
       )}
+
+      {/* Annonce importante en plein écran (canal garanti, même sans push) */}
+      <AnnouncementModal
+        announcement={pendingAnnouncement}
+        lang={lang}
+        onAcknowledge={() => acknowledgeAnnouncement(pendingAnnouncement.id)}
+      />
 
       {/* Admin code modal */}
       {adminModalOpen && (

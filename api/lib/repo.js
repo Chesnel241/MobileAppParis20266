@@ -76,18 +76,27 @@ export async function setContentSection(section, value) {
 }
 
 // ---------------- Notifications ----------------
-export async function createNotification({ fr, en }) {
+export async function createNotification({ fr, en, important = false, titleFr = '', titleEn = '' }) {
   const id = randomUUID();
-  const res = await supabase.from('notifications').insert({ id, text_fr: fr, text_en: en, created_at: nowIso() });
+  const res = await supabase.from('notifications').insert({
+    id, text_fr: fr, text_en: en,
+    important, title_fr: titleFr || null, title_en: titleEn || null,
+    created_at: nowIso(),
+  });
   must(res, 'createNotification');
-  return { id, fr, en };
+  return { id, fr, en, important, titleFr, titleEn };
 }
 
 export async function recentNotifications(limit = 50) {
   const { data, error } = await supabase.from('notifications')
-    .select('id, text_fr, text_en, created_at').order('created_at', { ascending: false }).limit(limit);
+    .select('id, text_fr, text_en, important, title_fr, title_en, created_at')
+    .order('created_at', { ascending: false }).limit(limit);
   if (error) throw new Error(`[DB] recentNotifications: ${error.message}`);
-  return (data || []).map(n => ({ id: n.id, fr: n.text_fr, en: n.text_en, createdAt: n.created_at }));
+  return (data || []).map(n => ({
+    id: n.id, fr: n.text_fr, en: n.text_en,
+    important: Boolean(n.important), titleFr: n.title_fr || '', titleEn: n.title_en || '',
+    createdAt: n.created_at,
+  }));
 }
 
 // ---------------- Questions ----------------

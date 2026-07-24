@@ -779,19 +779,41 @@
 
   // ---------- NOTIFICATIONS ----------
   async function secNotifs(m) {
-    header('Notifications', 'Diffusez un message à tous les participants. Il apparaît dans la cloche de l’app.')
+    header('Notifications', 'Diffusez un message à tous les participants : cloche de l’app + notification push. En « annonce importante », il s’affiche aussi en plein écran à l’ouverture — même chez ceux qui n’ont pas activé les notifications.')
       .forEach(n => m.appendChild(n));
-    const draft = { fr: '', en: '' };
+    const draft = { fr: '', en: '', important: false, titleFr: '', titleEn: '' };
+
+    // Champs de titre, visibles seulement en mode « annonce importante ».
+    const titleWrap = el('div', { style: 'display:none' }, [
+      el('div', { class: 'row c2' }, [
+        field('Titre FR (optionnel)', el('input', { oninput: e => { draft.titleFr = e.target.value; }, placeholder: 'Ex. Changement de salle' })),
+        field('Titre EN (optionnel)', el('input', { oninput: e => { draft.titleEn = e.target.value; }, placeholder: 'Ex. Room change' })),
+      ]),
+    ]);
+    const importantChk = el('input', { type: 'checkbox', onchange: e => {
+      draft.important = e.target.checked; titleWrap.style.display = e.target.checked ? '' : 'none';
+    } });
+
     m.appendChild(el('div', { class: 'card' }, [
       field('Message (FR)', el('textarea', { oninput: e => { draft.fr = e.target.value; }, placeholder: 'Ex. La session de 14h est déplacée en salle B.' })),
       field('Message (EN) — optionnel', el('textarea', { oninput: e => { draft.en = e.target.value; }, placeholder: 'Same message in English (optional)' })),
-      el('button', { class: 'add', style: 'background:var(--red);color:#fff', onclick: async () => {
+      el('label', { style: 'display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:600;color:var(--ink);text-transform:none;letter-spacing:0;margin:4px 0 2px;cursor:pointer' }, [
+        importantChk, '📣 Annonce importante — affichée en plein écran dans l’application',
+      ]),
+      titleWrap,
+      el('button', { class: 'add', style: 'background:var(--red);color:#fff;margin-top:8px', onclick: async () => {
         if (!draft.fr.trim()) return toast('Message FR requis');
-        try { await api('/api/admin/notifications', { method: 'POST', auth: true, body: { textFr: draft.fr, textEn: draft.en } });
-          toast('Notification envoyée ✓'); renderSection('notifications'); }
-        catch (e) { toast('Erreur : ' + e.message); }
-      } }, 'Envoyer la notification'),
+        if (draft.important && !confirm('Diffuser cette ANNONCE IMPORTANTE ?\n\nElle s’affichera en plein écran chez tous les participants à l’ouverture de l’application.')) return;
+        try {
+          await api('/api/admin/notifications', { method: 'POST', auth: true, body: {
+            textFr: draft.fr, textEn: draft.en, important: draft.important, titleFr: draft.titleFr, titleEn: draft.titleEn,
+          } });
+          toast(draft.important ? 'Annonce importante diffusée ✓' : 'Notification envoyée ✓');
+          renderSection('notifications');
+        } catch (e) { toast('Erreur : ' + e.message); }
+      } }, 'Envoyer'),
     ]));
+
     m.appendChild(el('h3', { style: 'margin:14px 0 8px' }, 'Dernières notifications'));
     const list = el('div', { class: 'card' }, [el('div', { class: 'muted' }, 'Chargement…')]);
     m.appendChild(list);
@@ -799,9 +821,16 @@
       const rows = await api('/api/notifications');
       list.innerHTML = '';
       if (!rows.length) list.appendChild(el('div', { class: 'muted' }, 'Aucune notification.'));
-      rows.forEach(r => list.appendChild(el('div', { class: 'notif-item' }, [
-        el('div', {}, r.fr), el('small', {}, new Date(r.createdAt).toLocaleString('fr-FR')),
-      ])));
+      rows.forEach(r => {
+        const head = [];
+        if (r.important) head.push(el('span', { style: 'display:inline-block;background:#fbeae7;color:var(--red);font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;margin-right:6px' }, '📣 Importante'));
+        if (r.important && (r.titleFr || r.titleEn)) head.push(el('strong', {}, r.titleFr || r.titleEn));
+        list.appendChild(el('div', { class: 'notif-item' }, [
+          head.length ? el('div', { style: 'margin-bottom:2px' }, head) : null,
+          el('div', {}, r.fr),
+          el('small', {}, new Date(r.createdAt).toLocaleString('fr-FR')),
+        ].filter(Boolean)));
+      });
     } catch (e) { list.innerHTML = ''; list.appendChild(el('div', { class: 'err' }, 'Erreur de chargement')); }
   }
 

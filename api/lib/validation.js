@@ -202,9 +202,18 @@ export function validatePushUnsubscribeInput(value) {
 }
 
 export function validateNotificationInput(value) {
-  const input = object(value, 'body', ['textFr'], ['textEn']);
+  const input = object(value, 'body', ['textFr'], ['textEn', 'important', 'titleFr', 'titleEn']);
   const textFr = string(input.textFr, 'textFr', { max: 1000 });
-  return { textFr, textEn: optionalString(input.textEn, 'textEn', 1000) || textFr };
+  const titleFr = optionalString(input.titleFr, 'titleFr', 120);
+  return {
+    textFr,
+    textEn: optionalString(input.textEn, 'textEn', 1000) || textFr,
+    // Une annonce « importante » s'affiche en plein écran dans l'application,
+    // pour atteindre aussi les participants sans notifications push activées.
+    important: input.important === true,
+    titleFr,
+    titleEn: optionalString(input.titleEn, 'titleEn', 120) || titleFr,
+  };
 }
 
 export function validateQuestionAssignmentInput(value) {

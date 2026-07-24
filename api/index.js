@@ -163,9 +163,9 @@ app.put('/api/admin/content/:section', requireAdmin, asyncHandler(async (req, re
 app.get('/api/notifications', asyncHandler(async (_req, res) => res.json(await repo.recentNotifications())));
 
 app.post('/api/admin/notifications', requireAdmin, asyncHandler(async (req, res) => {
-  const { textFr: fr, textEn: en } = validateNotificationInput(req.body);
-  const created = await repo.createNotification({ fr, en });
-  const push = await broadcast({ fr, en });
+  const { textFr: fr, textEn: en, important, titleFr, titleEn } = validateNotificationInput(req.body);
+  const created = await repo.createNotification({ fr, en, important, titleFr, titleEn });
+  const push = await broadcast({ fr, en, titleFr, titleEn });
   res.status(201).json({ ...created, push });
 }));
 
